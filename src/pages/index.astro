@@ -165,21 +165,21 @@ const description =
   .hero-wash {
     position: absolute; inset: 0; z-index: 2; pointer-events: none;
     background: linear-gradient(90deg,
-      rgba(255, 224, 138, 0.90) 0%,
-      rgba(255, 224, 138, 0.50) 40%,
-      rgba(255, 224, 138, 0.0) 68%);
+      rgba(255, 224, 138, 0.96) 0%,
+      rgba(255, 224, 138, 0.72) 42%,
+      rgba(255, 224, 138, 0.30) 60%,
+      rgba(255, 224, 138, 0.0) 74%);
   }
+  /* Bare copy over the field — the wash below carries legibility. The block
+     ignores the pointer so the globe stays draggable through it; only the
+     buttons and links catch input. */
   .hero-card {
     position: absolute; z-index: 3; top: 50%; transform: translateY(-52%);
     left: clamp(24px, 6vw, 110px);
     max-width: 620px;
-    background: var(--glass-fill);
-    backdrop-filter: blur(20px) saturate(150%);
-    border: var(--glass-border);
-    box-shadow: var(--glass-shadow);
-    border-radius: 24px;
-    padding: 36px 38px;
+    pointer-events: none;
   }
+  .hero-card a, .hero-card .btn { pointer-events: auto; }
   .hero-card .eyebrow { color: var(--tf-ink); opacity: 0.75; }
   h1 {
     font-size: clamp(40px, 5vw, 64px); line-height: 1.08;
@@ -357,7 +357,7 @@ const description =
         rgba(185, 205, 245, 0.55) 45%,
         rgba(185, 205, 245, 0.0) 75%);
     }
-    .hero-card { top: 84px; transform: none; left: 16px; right: 16px; max-width: none; padding: 24px; animation-name: panel-in; }
+    .hero-card { top: 84px; transform: none; left: 24px; right: 24px; max-width: none; animation-name: panel-in; }
   }
   /* §8: under prefers-reduced-motion all movement becomes an opacity
      cross-fade at 120ms. */
