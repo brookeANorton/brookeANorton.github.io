@@ -54,6 +54,12 @@ const description =
     --tf-mist: #EEF2FB;
     --tf-white: #FFFFFF;
     --tf-border: #E3E9F6;
+    /* Brighter direction (user request, deviating from the spec's butter-as-
+       signal-only rule): butter is the field colour, with a warm bright paper
+       derived from it for the content sections. The primary action inverts to
+       ink fill because butter-on-butter cannot signal. */
+    --tf-paper: #FFF7E0;
+    --tf-border-warm: #F0E2B6;
     --sans: 'Outfit', 'Segoe UI', sans-serif;
     --mono: 'IBM Plex Mono', Consolas, monospace;
     --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -67,7 +73,7 @@ const description =
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   body {
-    background: var(--tf-mist);
+    background: var(--tf-paper);
     color: var(--tf-ink);
     font-family: var(--sans);
     font-size: 15px;
@@ -148,7 +154,7 @@ const description =
   .hero {
     position: relative; overflow: hidden;
     height: 94vh; min-height: 640px;
-    background: var(--tf-sky);
+    background: var(--tf-butter);
   }
   #globeEmbed {
     position: absolute; top: -32%; height: 164%;
@@ -159,9 +165,9 @@ const description =
   .hero-wash {
     position: absolute; inset: 0; z-index: 2; pointer-events: none;
     background: linear-gradient(90deg,
-      rgba(185, 205, 245, 0.85) 0%,
-      rgba(185, 205, 245, 0.45) 40%,
-      rgba(185, 205, 245, 0.0) 68%);
+      rgba(255, 224, 138, 0.90) 0%,
+      rgba(255, 224, 138, 0.50) 40%,
+      rgba(255, 224, 138, 0.0) 68%);
   }
   .hero-card {
     position: absolute; z-index: 3; top: 50%; transform: translateY(-52%);
@@ -236,7 +242,7 @@ const description =
 
   /* ---------- paper sections (§4: elevation = border, no shadow) ---------- */
   section { padding: 88px 0; }
-  section + section { border-top: 1px solid var(--tf-border); }
+  section + section { border-top: 1px solid var(--tf-border-warm); }
   section .eyebrow { opacity: 0.75; margin-bottom: 12px; }
   h2 {
     font-size: clamp(26px, 3vw, 34px); line-height: 1.15;
@@ -247,7 +253,7 @@ const description =
 
   .mode-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
   .mode-card {
-    background: var(--tf-white); border: 1px solid var(--tf-border);
+    background: var(--tf-white); border: 1px solid var(--tf-border-warm);
     border-radius: 16px; padding: 14px 16px 18px; min-height: 180px;
     display: flex; flex-direction: column; gap: 10px;
     transition: transform var(--enter) var(--ease), border-color var(--enter) var(--ease);
@@ -265,7 +271,7 @@ const description =
   .feature-row + .feature-row { margin-top: 84px; }
   .feature-row.flip .feature-art { order: 2; }
   .feature-art {
-    background: var(--tf-white); border: 1px solid var(--tf-border);
+    background: var(--tf-white); border: 1px solid var(--tf-border-warm);
     border-radius: 16px; padding: 20px; min-height: 220px;
   }
 
@@ -273,12 +279,12 @@ const description =
   .lens-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
   .chip {
     font-size: 13px; color: var(--tf-ink); padding: 7px 14px;
-    border-radius: 999px; border: 1px solid var(--tf-border); background: var(--tf-white);
+    border-radius: 999px; border: 1px solid var(--tf-border-warm); background: var(--tf-white);
   }
-  .chip.on { background: var(--tf-mint); border-color: var(--tf-mint); font-weight: 500; }
+  .chip.on { background: var(--tf-butter); border-color: var(--tf-butter); font-weight: 500; }
   .dest-line {
     display: flex; justify-content: space-between; padding: 11px 4px;
-    border-bottom: 1px solid var(--tf-border); font-size: 15px;
+    border-bottom: 1px solid var(--tf-border-warm); font-size: 15px;
   }
   .dest-line span:last-child { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; opacity: 0.7; align-self: center; }
 
@@ -289,7 +295,7 @@ const description =
   }
   .day-block b { display: block; font-weight: 600; margin-bottom: 2px; }
   .day-block small { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; }
-  .day-stay { background: var(--tf-mint); }
+  .day-stay { background: var(--tf-butter); }
   .day-move { background: var(--tf-sky); }
 
   .stat-row { display: flex; gap: 44px; margin-top: 28px; flex-wrap: wrap; }
@@ -302,11 +308,11 @@ const description =
   /* ---------- about + cta ---------- */
   .about-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 56px; }
   .about-grid p { margin-bottom: 14px; opacity: 0.9; }
-  .cta-panel { text-align: center; padding: 92px 24px; border-top: 1px solid var(--tf-border); }
+  .cta-panel { text-align: center; padding: 92px 24px; border-top: 1px solid var(--tf-border-warm); background: var(--tf-butter); }
   .cta-panel h2 { margin-bottom: 10px; }
   .cta-panel p { opacity: 0.85; margin-bottom: 28px; }
 
-  footer { border-top: 1px solid var(--tf-border); padding: 34px 0; background: var(--tf-white); }
+  footer { border-top: 1px solid var(--tf-border-warm); padding: 34px 0; background: var(--tf-white); }
   .foot-inner { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
   footer, footer a { font-size: 13px; opacity: 0.9; }
   footer a:hover { text-decoration: underline; text-underline-offset: 3px; }
@@ -385,7 +391,7 @@ const description =
       curated destinations, real flights and roads, and a timeline you build by touch.
       No spreadsheets. No forty open tabs.</p>
     <div class="hero-cta">
-      <a class="btn btn-signal" href="#">Start exploring — it's free</a>
+      <a class="btn btn-paper" href="#">Start exploring — it's free</a>
       <a class="btn btn-secondary" href="#modes">See the globe</a>
     </div>
     <p class="hero-note">Runs in your browser · nothing to install</p>
