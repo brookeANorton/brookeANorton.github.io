@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.astro/
+
+# The built globe engine bundle is synced from the TravelApp repo by
+# `npm run sync-globe`, and (like in TravelApp itself) stays untracked because
+# the build bakes API keys into it. A fresh clone must run sync-globe once.
+public/globe/

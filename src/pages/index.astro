@@ -1,0 +1,533 @@
+---
+// Landing page. Static HTML for crawlers; the only client JS is the globe
+// engine mount and two small UI behaviours (nav frost, dock mode toggle).
+const title = 'Tail Feathers — Spin the globe. Plan the trip.';
+const description =
+  'Tail Feathers turns trip planning into play: a living 3D globe with curated ' +
+  'destinations, real flights and roads, and a trip timeline you build by touch.';
+---
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{title}</title>
+<meta name="description" content={description} />
+<meta property="og:type" content="website" />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:image" content="/og-cover.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<script type="application/ld+json" is:inline>
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Tail Feathers",
+  "applicationCategory": "TravelApplication",
+  "operatingSystem": "Web",
+  "description": "A game-like 3D travel planner: spin a living globe, browse curated destinations, and build your trip on a timeline with real flights and roads.",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+<style is:global>
+  :root {
+    --ground: #F4F8F7;
+    --surface: #FFFFFF;
+    --line: #D9E4E1;
+    --ink: #17333C;
+    --muted: #5E7680;
+    --coral: #E9502F;
+    --coral-soft: #FBE4DD;
+    --teal: #0E8C85;
+    --teal-soft: #DCF0EE;
+    --sky: #BFDDE4;
+    --display: "Bahnschrift", "Arial Narrow", "Segoe UI", sans-serif;
+    --body: "Segoe UI", system-ui, sans-serif;
+    --mono: "Cascadia Mono", Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 17px;
+    line-height: 1.6;
+  }
+  a { color: inherit; text-decoration: none; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- nav: logo only, floats over the hero, frosts on scroll ---------- */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+    background: transparent;
+    border-bottom: 1px solid transparent;
+    transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  nav.scrolled {
+    background: color-mix(in srgb, var(--ground) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom-color: var(--line);
+    box-shadow: 0 2px 14px rgba(23, 51, 60, 0.06);
+  }
+  .nav-inner {
+    display: flex; align-items: center; gap: 32px; height: 68px;
+    padding: 0 clamp(20px, 3vw, 44px);
+  }
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--display); font-size: 20px; letter-spacing: 0.10em;
+  }
+  .logo-mark {
+    width: 24px; height: 24px;
+    background: linear-gradient(135deg, var(--teal), #0B6B66);
+    border-radius: 0 50% 45% 50%;
+    transform: rotate(-38deg);
+    position: relative;
+    box-shadow: 0 2px 6px rgba(14, 140, 133, 0.35);
+  }
+  .logo-mark::after {
+    content: ""; position: absolute; left: 50%; top: 8%;
+    width: 1.5px; height: 84%;
+    background: var(--coral);
+    border-radius: 2px;
+  }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; border-radius: 4px; }
+  .btn {
+    display: inline-block;
+    font-family: var(--display); letter-spacing: 0.06em; font-size: 15px;
+    padding: 10px 22px; border-radius: 999px; border: none; cursor: pointer;
+  }
+  .btn-primary {
+    background: var(--coral); color: #fff;
+    box-shadow: 0 6px 18px rgba(233, 80, 47, 0.30);
+  }
+  .btn-primary:hover { background: #D14024; }
+  .btn-ghost { border: 1.5px solid var(--line); color: var(--ink); background: var(--surface); }
+  .btn-ghost:hover { border-color: var(--teal); color: var(--teal); }
+
+  /* ---------- hero: the globe IS the hero ---------- */
+  .hero {
+    position: relative; overflow: hidden;
+    height: 94vh; min-height: 640px;
+    background: #EAF3F4;
+  }
+  /* Oversized engine mount: the globe scales with its container, so a mount
+     much taller and wider than the hero renders a planet that clips off the
+     right edge and past the top and bottom of the section. */
+  #globeEmbed {
+    position: absolute; top: -32%; height: 164%;
+    left: 4%; width: 140%;
+  }
+  /* Legibility wash over the left half, fading into the globe. Sits between the
+     engine and the copy; lets pointer events through to the globe. */
+  .hero-wash {
+    position: absolute; inset: 0; z-index: 2; pointer-events: none;
+    background: linear-gradient(90deg,
+      rgba(244, 248, 247, 0.97) 0%,
+      rgba(244, 248, 247, 0.88) 36%,
+      rgba(244, 248, 247, 0.45) 58%,
+      rgba(244, 248, 247, 0.0) 74%);
+  }
+  .hero-copy {
+    position: absolute; z-index: 3; top: 50%; transform: translateY(-52%);
+    left: clamp(24px, 6vw, 110px);
+    max-width: 560px;
+    pointer-events: none;
+  }
+  .hero-copy a, .hero-copy .btn { pointer-events: auto; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 13px; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--teal);
+  }
+  h1 {
+    font-family: var(--display); font-weight: 700;
+    font-size: clamp(44px, 6vw, 76px); line-height: 1.02;
+    letter-spacing: 0.01em; text-wrap: balance;
+    margin: 18px 0 22px;
+  }
+  h1 .coral { color: var(--coral); }
+  .hero p.lede { color: var(--muted); max-width: 26em; font-size: 19px; }
+  .hero-cta { display: flex; gap: 14px; margin-top: 34px; align-items: center; }
+  .hero-note { font-family: var(--mono); font-size: 12.5px; color: var(--muted); margin-top: 16px; }
+  .globe-boot {
+    position: absolute; inset: 0; z-index: 1;
+    display: flex; align-items: center; justify-content: center;
+    color: #4E7FA6; font-family: var(--mono); font-size: 13px; letter-spacing: 0.18em;
+    pointer-events: none; transition: opacity 0.5s ease;
+  }
+
+  /* The dock: one floating bar at the hero's foot carrying everything that
+     used to crowd the top-right — play controls, section links, auth. */
+  .globe-caption {
+    position: absolute; z-index: 3; bottom: 92px; left: 50%; transform: translateX(-50%);
+    font-family: var(--mono); font-size: 11.5px; color: var(--muted); letter-spacing: 0.16em;
+    white-space: nowrap;
+  }
+  .hero-dock {
+    position: absolute; z-index: 3; bottom: 24px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 10px; border-radius: 999px;
+    background: color-mix(in srgb, #FFFFFF 72%, transparent);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    box-shadow: 0 12px 34px rgba(23, 51, 60, 0.16);
+    max-width: calc(100vw - 32px);
+  }
+  .dock-toggle {
+    display: flex; gap: 3px; padding: 3px;
+    border-radius: 999px; background: color-mix(in srgb, var(--ground) 85%, transparent);
+  }
+  .mode-chip {
+    font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.08em;
+    padding: 7px 13px; border-radius: 999px; cursor: pointer;
+    border: none; background: transparent; color: var(--muted);
+  }
+  .mode-chip.on { background: var(--surface); color: var(--teal); box-shadow: 0 1px 4px rgba(23, 51, 60, 0.14); }
+  .dock-divider { width: 1px; height: 24px; background: var(--line); margin: 0 8px; }
+  .dock-links { display: flex; align-items: center; gap: 2px; }
+  .dock-links a {
+    font-size: 14.5px; color: var(--ink);
+    padding: 8px 14px; border-radius: 999px;
+    white-space: nowrap;
+  }
+  .dock-links a:hover { background: color-mix(in srgb, var(--ground) 80%, transparent); }
+  .dock-cta {
+    font-family: var(--display); letter-spacing: 0.06em; font-size: 14px;
+    padding: 9px 18px; border-radius: 999px;
+    background: var(--coral); color: #fff;
+    box-shadow: 0 4px 14px rgba(233, 80, 47, 0.30);
+    white-space: nowrap;
+  }
+  .dock-cta:hover { background: #D14024; }
+
+  /* ---------- sections ---------- */
+  section { padding: 88px 0; border-top: 1px solid var(--line); }
+  .kicker {
+    font-family: var(--mono); font-size: 13px; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--coral); margin-bottom: 14px;
+  }
+  h2 {
+    font-family: var(--display); font-size: clamp(30px, 3.6vw, 44px);
+    line-height: 1.1; letter-spacing: 0.01em; text-wrap: balance;
+    margin-bottom: 14px;
+  }
+  .section-lede { color: var(--muted); max-width: 38em; margin-bottom: 44px; }
+
+  .mode-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .mode-card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 14px; padding: 22px 20px; min-height: 190px;
+    display: flex; flex-direction: column; gap: 10px;
+    box-shadow: 0 2px 10px rgba(23, 51, 60, 0.05);
+    transition: transform 0.18s ease, border-color 0.18s ease;
+  }
+  .mode-card:hover { transform: translateY(-4px); border-color: var(--teal); }
+  .mode-swatch { width: 100%; height: 64px; border-radius: 8px; }
+  .mode-card h3 { font-family: var(--display); font-size: 19px; letter-spacing: 0.04em; }
+  .mode-card p { color: var(--muted); font-size: 14.5px; line-height: 1.5; }
+  .sw-cartoon { background: linear-gradient(120deg, #3FA76B 0% 34%, #5FC488 34% 55%, #4B8FD9 55% 100%); }
+  .sw-clay { background: linear-gradient(120deg, #D8A878 0% 40%, #B8CC9C 40% 62%, #93B9CF 62% 100%); }
+  .sw-satellite { background: linear-gradient(120deg, #37522F 0% 30%, #66754A 30% 52%, #24486A 52% 100%); }
+  .sw-photoreal { background: linear-gradient(120deg, #8494A6 0% 30%, #B3C0CD 30% 58%, #4A5F78 58% 100%); }
+
+  .feature-row { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+  .feature-row + .feature-row { margin-top: 84px; }
+  .feature-row.flip .feature-art { order: 2; }
+  .feature-art {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+    padding: 26px; min-height: 240px;
+    box-shadow: 0 2px 12px rgba(23, 51, 60, 0.06);
+  }
+  .lens-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+  .chip {
+    font-family: var(--mono); font-size: 13px; padding: 7px 15px;
+    border-radius: 999px; border: 1px solid var(--line); color: var(--muted);
+    background: var(--ground);
+  }
+  .chip.on { border-color: var(--teal); color: var(--teal); background: var(--teal-soft); }
+  .dest-line {
+    display: flex; justify-content: space-between; padding: 11px 4px;
+    border-bottom: 1px solid var(--line); font-size: 15px;
+  }
+  .dest-line span:last-child { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+
+  .timeline-strip { display: flex; gap: 10px; align-items: stretch; margin-top: 8px; }
+  .day-block {
+    flex: 1; border-radius: 10px; padding: 12px 10px 14px;
+    font-family: var(--mono); font-size: 12px; line-height: 1.5;
+  }
+  .day-block b { display: block; font-size: 13px; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .day-stay { background: var(--teal-soft); border: 1px solid var(--teal); color: #0A6560; }
+  .day-move { background: var(--coral-soft); border: 1px solid var(--coral); color: #B23A1D; }
+
+  .stat-row { display: flex; gap: 44px; margin-top: 30px; flex-wrap: wrap; }
+  .stat b {
+    display: block; font-family: var(--display); font-size: 34px;
+    color: var(--coral); font-variant-numeric: tabular-nums;
+  }
+  .stat span { color: var(--muted); font-size: 14px; }
+
+  /* ---------- about + cta ---------- */
+  .about-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 56px; }
+  .about-grid p { color: var(--muted); margin-bottom: 16px; }
+  .cta-panel {
+    text-align: center; padding: 92px 24px;
+    background: radial-gradient(ellipse 60% 90% at 50% 100%, rgba(233, 80, 47, 0.10), transparent 70%);
+  }
+  .cta-panel h2 { margin-bottom: 12px; }
+  .cta-panel p { color: var(--muted); margin-bottom: 30px; }
+
+  footer { border-top: 1px solid var(--line); padding: 36px 0; background: var(--surface); }
+  .foot-inner { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
+  footer, footer a { color: var(--muted); font-size: 14px; }
+  footer a:hover { color: var(--ink); }
+  .foot-links { display: flex; gap: 22px; }
+
+  @media (max-width: 860px) {
+    .feature-row, .about-grid { grid-template-columns: 1fr; }
+    .feature-row.flip .feature-art { order: 0; }
+    .mode-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Small screens: the dock keeps play + auth, section links wait below. */
+    .dock-links.quiet, .dock-divider { display: none; }
+    .globe-caption { display: none; }
+    /* Small screens: globe drops behind a stronger wash, copy reads on top. */
+    .hero { min-height: 560px; }
+    #globeEmbed { top: -20%; height: 140%; left: -30%; width: 160%; }
+    .hero-wash {
+      background: linear-gradient(180deg,
+        rgba(244, 248, 247, 0.94) 0%,
+        rgba(244, 248, 247, 0.75) 45%,
+        rgba(244, 248, 247, 0.0) 75%);
+    }
+    .hero-copy { top: 24px; transform: none; left: 24px; right: 24px; max-width: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .mode-card, .mode-card:hover { transform: none; transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="/"><span class="logo-mark"></span>TAIL FEATHERS</a>
+  </div>
+</nav>
+
+<header class="hero" id="heroSection">
+  <div id="globeEmbed"></div>
+  <div class="globe-boot" id="globeBoot">LOADING THE WORLD…</div>
+  <div class="hero-wash"></div>
+  <div class="hero-copy">
+    <p class="eyebrow">A new way to plan travel</p>
+    <h1>Spin the globe.<br><span class="coral">Plan the trip.</span></h1>
+    <p class="lede">Tail Feathers turns trip planning into play — a living 3D globe with
+      curated destinations, real flights and roads, and a timeline you build by touch.
+      No spreadsheets. No forty open tabs.</p>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="#">Start exploring — it's free</a>
+      <a class="btn btn-ghost" href="#modes">See the globe</a>
+    </div>
+    <p class="hero-note">Runs in your browser · nothing to install</p>
+  </div>
+  <span class="globe-caption">LIVE — DRAG TO SPIN</span>
+  <div class="hero-dock">
+    <div class="dock-toggle">
+      <button class="mode-chip on" type="button" data-mode="clay">CARTOON</button>
+      <button class="mode-chip" type="button" data-mode="stylized">MAP</button>
+    </div>
+    <span class="dock-divider"></span>
+    <div class="dock-links quiet">
+      <a href="#modes">Globe modes</a>
+      <a href="#plan">Planning</a>
+      <a href="#about">About</a>
+    </div>
+    <span class="dock-divider"></span>
+    <div class="dock-links">
+      <a href="#">Log in</a>
+    </div>
+    <a class="dock-cta" href="#">Start free</a>
+  </div>
+</header>
+
+<section id="modes">
+  <div class="wrap">
+    <p class="kicker">Four globes in one</p>
+    <h2>Pick the planet that fits your mood</h2>
+    <p class="section-lede">Every mode is the same living world — your trips, lenses and
+      timeline carry across all of them.</p>
+    <div class="mode-grid">
+      <div class="mode-card">
+        <div class="mode-swatch sw-cartoon"></div>
+        <h3>Cartoon terrain</h3>
+        <p>Hand-styled mountains and coasts, built live from real elevation data.</p>
+      </div>
+      <div class="mode-card">
+        <div class="mode-swatch sw-clay"></div>
+        <h3>Clay</h3>
+        <p>A soft, sculpted look you can retune in-app — your globe, your palette.</p>
+      </div>
+      <div class="mode-card">
+        <div class="mode-swatch sw-satellite"></div>
+        <h3>Satellite</h3>
+        <p>Real imagery when you want to see the actual place from above.</p>
+      </div>
+      <div class="mode-card">
+        <div class="mode-swatch sw-photoreal"></div>
+        <h3>Photoreal 3D</h3>
+        <p>Fly through cities in full photorealistic 3D before you ever land.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="plan">
+  <div class="wrap">
+    <p class="kicker">Curated, not crowdsourced</p>
+
+    <div class="feature-row">
+      <div>
+        <h2>Lenses that answer "where next?"</h2>
+        <p class="section-lede" style="margin-bottom:0">Flip on a lens and the globe re-lights
+          around it: beaches, food, culture, adventure — filtered by the month you can
+          actually travel. Every destination is hand-curated with photos, highlights and
+          ready-made itinerary packs.</p>
+        <div class="stat-row">
+          <div class="stat"><b>2,009</b><span>beaches, ranked</span></div>
+          <div class="stat"><b>5</b><span>theme lenses</span></div>
+          <div class="stat"><b>12</b><span>months, one filter</span></div>
+        </div>
+      </div>
+      <div class="feature-art">
+        <div class="lens-chips">
+          <span class="chip on">Beaches</span><span class="chip">Food</span>
+          <span class="chip">Culture</span><span class="chip">Adventure</span>
+          <span class="chip on">· September</span>
+        </div>
+        <div class="dest-line"><span>Navagio Cove</span><span>36.99° N — RANK 1</span></div>
+        <div class="dest-line"><span>Praia da Marinha</span><span>37.09° N — RANK 2</span></div>
+        <div class="dest-line"><span>Whitehaven Beach</span><span>20.28° S — RANK 3</span></div>
+        <div class="dest-line" style="border:none"><span>Anse Source d'Argent</span><span>4.37° S — RANK 4</span></div>
+      </div>
+    </div>
+
+    <div class="feature-row flip">
+      <div>
+        <h2>A timeline you can feel</h2>
+        <p class="section-lede" style="margin-bottom:0">Your trip lives on a dock at the bottom
+          of the globe. Drag stays to stretch them, tap + to hang a day trip off any stop, and
+          watch flights and road routes draw themselves between the days — with real schedules
+          and real driving roads, not straight lines.</p>
+      </div>
+      <div class="feature-art">
+        <p style="font-family:var(--mono); font-size:12px; letter-spacing:0.16em; color:var(--muted); margin-bottom:14px">TRIP — LISBON LOOP · 9 DAYS</p>
+        <div class="timeline-strip">
+          <div class="day-block day-stay" style="flex:3"><b>LISBON</b>3 nights</div>
+          <div class="day-block day-move" style="flex:1"><b>DRIVE</b>2h 40m</div>
+          <div class="day-block day-stay" style="flex:2"><b>LAGOS</b>2 nights</div>
+          <div class="day-block day-move" style="flex:1"><b>FLIGHT</b>TP 1904</div>
+          <div class="day-block day-stay" style="flex:3"><b>MADEIRA</b>3 nights</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="about">
+  <div class="wrap about-grid">
+    <div>
+      <p class="kicker">About us</p>
+      <h2>Built by people who plan trips for fun</h2>
+      <p>Tail Feathers started with a simple complaint: planning a trip is the best part of
+        travelling, and every tool treats it like filing taxes. We wanted the feeling of
+        spinning a globe in a library — wonder first, logistics second.</p>
+      <p>So we built our own globe engine from scratch, curated every destination by hand, and
+        wired in real flight and road data. The result is a planner that feels like a game and
+        outputs a trip you can actually take.</p>
+    </div>
+    <div class="feature-art">
+      <p style="font-family:var(--mono); font-size:13px; color:var(--teal); letter-spacing:0.14em; margin-bottom:16px">FIELD NOTES</p>
+      <p style="color:var(--muted); font-size:15px">"We rebuilt the coastlines four times until
+        the cartoon mode felt right. The Baltic kept turning the wrong shade of blue. Worth it."</p>
+      <p style="color:var(--muted); font-size:13px; margin-top:14px; font-family:var(--mono)">— the Tail Feathers engine team</p>
+    </div>
+  </div>
+</section>
+
+<div class="cta-panel">
+  <div class="wrap">
+    <h2>The world is loaded. Your move.</h2>
+    <p>Free to start — your first trip takes about ten minutes to plan.</p>
+    <a class="btn btn-primary" href="#">Create your account</a>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 Tail Feathers. Map data © OpenStreetMap contributors.</span>
+    <div class="foot-links">
+      <a href="#about">About</a><a href="#">Privacy</a><a href="#">Terms</a><a href="#">Contact</a>
+    </div>
+  </div>
+</footer>
+
+<script is:inline type="module">
+  // The BUILT engine bundle, synced into public/globe by `npm run sync-globe`.
+  import { mount } from '/globe/globe-host.js';
+
+  const boot = document.getElementById('globeBoot');
+  const chips = [...document.querySelectorAll('.mode-chip')];
+
+  // Transport must be registered before mount so the ready event has somewhere
+  // to land. Boot into the free stylized basemap, then switch to the cartoon
+  // surface (mode id 'clay') once the engine reports ready — sending it earlier
+  // would race init.
+  window.__globeOnEvent = (raw) => {
+    const event = JSON.parse(raw);
+    if (event.type === 'ready') {
+      window.Globe.receive({ type: 'setMode', payload: { modeId: 'clay' } });
+      // Pull the camera in over the Atlantic so the planet fills the frame
+      // instead of floating as a marble in the middle of it.
+      window.Globe.receive({
+        type: 'flyTo',
+        payload: { latitude: 24, longitude: -18, altitude: 8500000, pitch: -90 },
+      });
+      boot.style.opacity = '0';
+    }
+    if (event.type === 'modeChanged') {
+      for (const chip of chips) {
+        chip.classList.toggle('on', chip.dataset.mode === event.payload.modeId);
+      }
+    }
+    if (event.type === 'error') console.error('[globe]', event.payload.message);
+  };
+
+  mount(document.getElementById('globeEmbed'));
+
+  // The header floats transparent over the hero; past the hero's foot it needs
+  // a surface of its own to stay readable over the page content.
+  const navBar = document.querySelector('nav');
+  addEventListener('scroll', () => {
+    navBar.classList.toggle('scrolled', scrollY > 40);
+  }, { passive: true });
+
+  // Full-bleed hero: the wheel belongs to the page, not the globe. Capturing on
+  // the hero ancestor stops the event before any engine listener sees it, while
+  // the default (page scroll) still happens. Dragging still spins the globe.
+  document.getElementById('heroSection').addEventListener(
+    'wheel',
+    (event) => event.stopPropagation(),
+    { capture: true },
+  );
+
+  for (const chip of chips) {
+    chip.addEventListener('click', () => {
+      window.Globe.receive({ type: 'setMode', payload: { modeId: chip.dataset.mode } });
+    });
+  }
+</script>
+</body>
+</html>
