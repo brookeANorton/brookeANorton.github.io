@@ -285,6 +285,45 @@ const description =
   footer a:hover { color: var(--ink); }
   .foot-links { display: flex; gap: 22px; }
 
+  /* ---------- motion ----------
+     One orchestrated entrance for the hero, quiet scroll reveals below it.
+     Everything here is stripped under prefers-reduced-motion. */
+  @keyframes rise-in {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: none; }
+  }
+  /* Centered elements keep their translateX in every keyframe — a generic
+     `transform: none` end state would silently un-center them. */
+  @keyframes dock-in {
+    from { opacity: 0; transform: translate(-50%, 18px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .hero-copy > * { animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+  .hero-copy > *:nth-child(1) { animation-delay: 0.05s; }
+  .hero-copy > *:nth-child(2) { animation-delay: 0.16s; }
+  .hero-copy > *:nth-child(3) { animation-delay: 0.28s; }
+  .hero-copy > *:nth-child(4) { animation-delay: 0.42s; }
+  .hero-copy > *:nth-child(5) { animation-delay: 0.54s; }
+  .hero-dock { animation: dock-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.6s backwards; }
+  .globe-caption { animation: fade-in 0.9s ease 1.0s backwards; }
+  /* Scroll reveals: JS tags targets with .reveal (so the page is whole without
+     JS), then .in plays the entrance. `both` holds the hidden state through
+     the stagger delay; JS clears the animation once it finishes so hover
+     transforms (mode cards) are not pinned by the fill. */
+  .reveal { opacity: 0; }
+  .reveal.in { animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0s) both; }
+  .reveal.settled { animation: none; opacity: 1; }
+  /* Micro-interactions */
+  .btn, .dock-cta { transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease, color 0.18s ease; }
+  .btn-primary:hover, .dock-cta:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(233, 80, 47, 0.38); }
+  .btn-ghost:hover { transform: translateY(-2px); }
+  .mode-chip { transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease; }
+  .dock-links a { transition: background 0.18s ease; }
+
   @media (max-width: 860px) {
     .feature-row, .about-grid { grid-template-columns: 1fr; }
     .feature-row.flip .feature-art { order: 0; }
@@ -306,6 +345,9 @@ const description =
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     .mode-card, .mode-card:hover { transform: none; transition: none; }
+    .hero-copy > *, .hero-dock, .globe-caption { animation: none; }
+    .reveal, .reveal.in { animation: none; opacity: 1; }
+    .btn, .dock-cta, .btn-primary:hover, .dock-cta:hover, .btn-ghost:hover { transform: none; transition: none; }
   }
 </style>
 </head>
@@ -527,6 +569,70 @@ const description =
     chip.addEventListener('click', () => {
       window.Globe.receive({ type: 'setMode', payload: { modeId: chip.dataset.mode } });
     });
+  }
+
+  // ---------- scroll motion ----------
+  // Reveal classes are applied FROM JS so the document is complete without it
+  // (crawlers and no-JS readers see everything; motion is pure enhancement).
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reducedMotion && 'IntersectionObserver' in window) {
+    // Block-level targets only, never an element inside another target —
+    // nested reveals compound their translations and read as lag.
+    const targets = document.querySelectorAll(
+      '#modes .kicker, #modes h2, #modes .section-lede, .mode-card, ' +
+        '.feature-row > *, .about-grid > *, .cta-panel h2, .cta-panel p, .cta-panel .btn',
+    );
+    for (const el of targets) {
+      el.classList.add('reveal');
+      // Once the entrance finishes, drop the animation so its forwards-fill
+      // cannot pin `transform` and swallow hover lifts (the mode cards).
+      el.addEventListener('animationend', () => el.classList.add('settled'), { once: true });
+    }
+    // Stagger siblings that arrive as a group.
+    document.querySelectorAll('.mode-grid .mode-card').forEach((el, i) => {
+      el.style.setProperty('--reveal-delay', `${i * 90}ms`);
+    });
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          entry.target.classList.add('in');
+          io.unobserve(entry.target);
+        }
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -48px 0px' },
+    );
+    for (const el of targets) io.observe(el);
+
+    // Count the stats up from zero as they arrive.
+    const countUp = (el) => {
+      const raw = el.textContent;
+      const target = parseInt(raw.replace(/[^0-9]/g, ''), 10);
+      if (!Number.isFinite(target)) return;
+      const grouped = raw.includes(',');
+      const t0 = performance.now();
+      const duration = 1200;
+      const frame = (t) => {
+        const p = Math.min(1, (t - t0) / duration);
+        const eased = 1 - Math.pow(1 - p, 3);
+        const value = Math.round(target * eased);
+        el.textContent = grouped ? value.toLocaleString('en-US') : String(value);
+        if (p < 1) requestAnimationFrame(frame);
+      };
+      requestAnimationFrame(frame);
+    };
+    const statRow = document.querySelector('.stat-row');
+    if (statRow) {
+      const statIo = new IntersectionObserver(
+        (entries) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return;
+          statIo.disconnect();
+          statRow.querySelectorAll('.stat b').forEach(countUp);
+        },
+        { threshold: 0.4 },
+      );
+      statIo.observe(statRow);
+    }
   }
 </script>
 </body>
