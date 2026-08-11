@@ -1,9 +1,15 @@
 ---
-// Landing page. Static HTML for crawlers; the only client JS is the globe
-// engine mount and two small UI behaviours (nav frost, dock mode toggle).
-const title = 'Tail Feathers — Spin the globe. Plan the trip.';
+// Landing page, styled to the tailFeathers design specification v1.0 (pastel):
+// sky field + glass surfaces on the inspirational hero, flat paper below,
+// butter as the single signal colour, ink carrying all typography.
+//
+// One deliberate deviation, documented: the spec's type scale tops out at
+// Display 34 (it is written for app screens); a marketing hero needs more, so
+// the hero headline scales up to 64px while keeping Display's weight (500)
+// and tracking (-0.02em). Everything else uses the scale as written.
+const title = 'tailFeathers — Spin the globe. Plan the trip.';
 const description =
-  'Tail Feathers turns trip planning into play: a living 3D globe with curated ' +
+  'tailFeathers turns trip planning into play: a living 3D globe with curated ' +
   'destinations, real flights and roads, and a trip timeline you build by touch.';
 ---
 
@@ -14,16 +20,23 @@ const description =
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>{title}</title>
 <meta name="description" content={description} />
+<link rel="icon" href="/mark.svg" type="image/svg+xml" />
 <meta property="og:type" content="website" />
 <meta property="og:title" content={title} />
 <meta property="og:description" content={description} />
 <meta property="og:image" content="/og-cover.png" />
 <meta name="twitter:card" content="summary_large_image" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400&display=swap"
+  rel="stylesheet"
+/>
 <script type="application/ld+json" is:inline>
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  "name": "Tail Feathers",
+  "name": "tailFeathers",
   "applicationCategory": "TravelApplication",
   "operatingSystem": "Web",
   "description": "A game-like 3D travel planner: spin a living globe, browse curated destinations, and build your trip on a timeline with real flights and roads.",
@@ -31,323 +44,322 @@ const description =
 }
 </script>
 <style is:global>
+  /* ---------- tokens (design spec §2, §3, §8) ---------- */
   :root {
-    --ground: #F4F8F7;
-    --surface: #FFFFFF;
-    --line: #D9E4E1;
-    --ink: #17333C;
-    --muted: #5E7680;
-    --coral: #E9502F;
-    --coral-soft: #FBE4DD;
-    --teal: #0E8C85;
-    --teal-soft: #DCF0EE;
-    --sky: #BFDDE4;
-    --display: "Bahnschrift", "Arial Narrow", "Segoe UI", sans-serif;
-    --body: "Segoe UI", system-ui, sans-serif;
-    --mono: "Cascadia Mono", Consolas, monospace;
+    --tf-ink: #33406B;
+    --tf-sky: #B9CDF5;
+    --tf-butter: #FFE08A;
+    --tf-blush: #FFD0C2;
+    --tf-mint: #C9E6D8;
+    --tf-mist: #EEF2FB;
+    --tf-white: #FFFFFF;
+    --tf-border: #E3E9F6;
+    --sans: 'Outfit', 'Segoe UI', sans-serif;
+    --mono: 'IBM Plex Mono', Consolas, monospace;
+    --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --enter: 160ms;
+    --panel: 240ms;
+    /* Glass recipe (§4) */
+    --glass-fill: linear-gradient(160deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.32));
+    --glass-border: 1px solid rgba(255, 255, 255, 0.75);
+    --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 22px rgba(51, 64, 107, 0.10);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   body {
-    background: var(--ground);
-    color: var(--ink);
-    font-family: var(--body);
-    font-size: 17px;
+    background: var(--tf-mist);
+    color: var(--tf-ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 400;
     line-height: 1.6;
   }
   a { color: inherit; text-decoration: none; }
   .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--tf-ink); outline-offset: 2px; border-radius: 4px;
+  }
 
-  /* ---------- nav: logo only, floats over the hero, frosts on scroll ---------- */
+  /* ---------- type roles (§3) ---------- */
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px; line-height: 1.4; font-weight: 400;
+    letter-spacing: 0.14em; text-transform: uppercase;
+  }
+  .small { font-size: 13px; line-height: 1.5; }
+
+  /* ---------- nav: logo only, frosts to glass on scroll ---------- */
   nav {
     position: fixed; top: 0; left: 0; right: 0; z-index: 10;
-    background: transparent;
-    border-bottom: 1px solid transparent;
-    transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    background: transparent; border-bottom: 1px solid transparent;
+    transition: background var(--panel) var(--ease), border-color var(--panel) var(--ease), box-shadow var(--panel) var(--ease);
   }
   nav.scrolled {
-    background: color-mix(in srgb, var(--ground) 88%, transparent);
-    backdrop-filter: blur(10px);
-    border-bottom-color: var(--line);
-    box-shadow: 0 2px 14px rgba(23, 51, 60, 0.06);
+    background: var(--glass-fill);
+    backdrop-filter: blur(20px) saturate(150%);
+    border-bottom: var(--glass-border);
+    box-shadow: 0 8px 22px rgba(51, 64, 107, 0.10);
   }
   .nav-inner {
-    display: flex; align-items: center; gap: 32px; height: 68px;
+    display: flex; align-items: center; height: 68px;
     padding: 0 clamp(20px, 3vw, 44px);
   }
-  .logo {
-    display: flex; align-items: center; gap: 10px;
-    font-family: var(--display); font-size: 20px; letter-spacing: 0.10em;
-  }
-  .logo-mark {
-    width: 24px; height: 24px;
-    background: linear-gradient(135deg, var(--teal), #0B6B66);
-    border-radius: 0 50% 45% 50%;
-    transform: rotate(-38deg);
-    position: relative;
-    box-shadow: 0 2px 6px rgba(14, 140, 133, 0.35);
-  }
-  .logo-mark::after {
-    content: ""; position: absolute; left: 50%; top: 8%;
-    width: 1.5px; height: 84%;
-    background: var(--coral);
-    border-radius: 2px;
-  }
-  a:focus-visible, button:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; border-radius: 4px; }
-  .btn {
-    display: inline-block;
-    font-family: var(--display); letter-spacing: 0.06em; font-size: 15px;
-    padding: 10px 22px; border-radius: 999px; border: none; cursor: pointer;
-  }
-  .btn-primary {
-    background: var(--coral); color: #fff;
-    box-shadow: 0 6px 18px rgba(233, 80, 47, 0.30);
-  }
-  .btn-primary:hover { background: #D14024; }
-  .btn-ghost { border: 1.5px solid var(--line); color: var(--ink); background: var(--surface); }
-  .btn-ghost:hover { border-color: var(--teal); color: var(--teal); }
+  /* Wordmark: always "tailFeathers" — tail at 300, Feathers at 600 (§1, §3).
+     Gap ≈ 33% of the mark's diameter. */
+  .logo { display: flex; align-items: center; gap: 10px; font-size: 21px; line-height: 1; }
+  .logo img { width: 30px; height: 30px; display: block; }
+  .wm-tail { font-weight: 300; }
+  .wm-feathers { font-weight: 600; }
 
-  /* ---------- hero: the globe IS the hero ---------- */
+  /* ---------- buttons (§5) ---------- */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: var(--sans); font-size: 15px; line-height: 1; font-weight: 500;
+    border: none; cursor: pointer; white-space: nowrap;
+    transition: transform var(--enter) var(--ease), box-shadow var(--enter) var(--ease), background var(--enter) var(--ease);
+  }
+  /* Primary on a glass screen: butter fill, ink label, radius 12, height 46.
+     The one signal on the screen. */
+  .btn-signal {
+    background: var(--tf-butter); color: var(--tf-ink);
+    height: 46px; padding: 0 22px; border-radius: 12px;
+  }
+  .btn-signal:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(51, 64, 107, 0.14); }
+  /* Primary on paper: ink fill, white label, radius 14, height 48. */
+  .btn-paper {
+    background: var(--tf-ink); color: var(--tf-white);
+    height: 48px; padding: 0 24px; border-radius: 14px;
+  }
+  .btn-paper:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(51, 64, 107, 0.18); }
+  /* Secondary: 1px ink border, transparent fill. */
+  .btn-secondary {
+    background: transparent; color: var(--tf-ink);
+    border: 1px solid var(--tf-ink);
+    height: 46px; padding: 0 22px; border-radius: 12px;
+  }
+  .btn-secondary:hover { transform: translateY(-1px); }
+  /* Tertiary: underlined ink label, no fill. */
+  .btn-tertiary {
+    background: none; color: var(--tf-ink);
+    text-decoration: underline; text-underline-offset: 3px;
+    padding: 12px 10px; font-weight: 500;
+  }
+
+  /* ---------- hero: sky field, glass card over the live globe ---------- */
   .hero {
     position: relative; overflow: hidden;
     height: 94vh; min-height: 640px;
-    background: #EAF3F4;
+    background: var(--tf-sky);
   }
-  /* Oversized engine mount: the globe scales with its container, so a mount
-     much taller and wider than the hero renders a planet that clips off the
-     right edge and past the top and bottom of the section. */
   #globeEmbed {
     position: absolute; top: -32%; height: 164%;
     left: 4%; width: 140%;
   }
-  /* Legibility wash over the left half, fading into the globe. Sits between the
-     engine and the copy; lets pointer events through to the globe. */
+  /* Managed scrim so ink and glass stay legible over the imagery we control
+     (§4, §6) — sky-tinted, fading into the planet. */
   .hero-wash {
     position: absolute; inset: 0; z-index: 2; pointer-events: none;
     background: linear-gradient(90deg,
-      rgba(244, 248, 247, 0.97) 0%,
-      rgba(244, 248, 247, 0.88) 36%,
-      rgba(244, 248, 247, 0.45) 58%,
-      rgba(244, 248, 247, 0.0) 74%);
+      rgba(185, 205, 245, 0.85) 0%,
+      rgba(185, 205, 245, 0.45) 40%,
+      rgba(185, 205, 245, 0.0) 68%);
   }
-  .hero-copy {
+  .hero-card {
     position: absolute; z-index: 3; top: 50%; transform: translateY(-52%);
     left: clamp(24px, 6vw, 110px);
-    max-width: 560px;
-    pointer-events: none;
+    max-width: 620px;
+    background: var(--glass-fill);
+    backdrop-filter: blur(20px) saturate(150%);
+    border: var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    border-radius: 24px;
+    padding: 36px 38px;
   }
-  .hero-copy a, .hero-copy .btn { pointer-events: auto; }
-  .eyebrow {
-    font-family: var(--mono); font-size: 13px; letter-spacing: 0.22em;
-    text-transform: uppercase; color: var(--teal);
-  }
+  .hero-card .eyebrow { color: var(--tf-ink); opacity: 0.75; }
   h1 {
-    font-family: var(--display); font-weight: 700;
-    font-size: clamp(44px, 6vw, 76px); line-height: 1.02;
-    letter-spacing: 0.01em; text-wrap: balance;
-    margin: 18px 0 22px;
+    font-size: clamp(40px, 5vw, 64px); line-height: 1.08;
+    font-weight: 500; letter-spacing: -0.02em; text-wrap: balance;
+    margin: 14px 0 16px;
   }
-  h1 .coral { color: var(--coral); }
-  .hero p.lede { color: var(--muted); max-width: 26em; font-size: 19px; }
-  .hero-cta { display: flex; gap: 14px; margin-top: 34px; align-items: center; }
-  .hero-note { font-family: var(--mono); font-size: 12.5px; color: var(--muted); margin-top: 16px; }
+  h1 .light { font-weight: 300; }
+  .lede { font-size: 16px; max-width: 30em; }
+  .hero-cta { display: flex; gap: 12px; margin-top: 26px; align-items: center; flex-wrap: wrap; }
+  .hero-note { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.65; margin-top: 18px; }
   .globe-boot {
     position: absolute; inset: 0; z-index: 1;
     display: flex; align-items: center; justify-content: center;
-    color: #4E7FA6; font-family: var(--mono); font-size: 13px; letter-spacing: 0.18em;
-    pointer-events: none; transition: opacity 0.5s ease;
+    color: var(--tf-ink); opacity: 0.6;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+    pointer-events: none; transition: opacity var(--panel) var(--ease);
   }
 
-  /* The dock: one floating bar at the hero's foot carrying everything that
-     used to crowd the top-right — play controls, section links, auth. */
+  /* ---------- the dock: glass pill (tab bar recipe, §5) ---------- */
   .globe-caption {
-    position: absolute; z-index: 3; bottom: 92px; left: 50%; transform: translateX(-50%);
-    font-family: var(--mono); font-size: 11.5px; color: var(--muted); letter-spacing: 0.16em;
-    white-space: nowrap;
+    position: absolute; z-index: 3; bottom: 96px; left: 50%; transform: translateX(-50%);
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--tf-ink); opacity: 0.7; white-space: nowrap;
   }
   .hero-dock {
     position: absolute; z-index: 3; bottom: 24px; left: 50%; transform: translateX(-50%);
-    display: flex; align-items: center; gap: 6px;
-    padding: 8px 10px; border-radius: 999px;
-    background: color-mix(in srgb, #FFFFFF 72%, transparent);
-    backdrop-filter: blur(14px);
-    border: 1px solid rgba(255, 255, 255, 0.7);
-    box-shadow: 0 12px 34px rgba(23, 51, 60, 0.16);
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px 8px; border-radius: 20px;
+    background: var(--glass-fill);
+    backdrop-filter: blur(20px) saturate(150%);
+    border: var(--glass-border);
+    box-shadow: var(--glass-shadow);
     max-width: calc(100vw - 32px);
   }
-  .dock-toggle {
-    display: flex; gap: 3px; padding: 3px;
-    border-radius: 999px; background: color-mix(in srgb, var(--ground) 85%, transparent);
-  }
+  .dock-toggle { display: flex; }
   .mode-chip {
-    font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.08em;
-    padding: 7px 13px; border-radius: 999px; cursor: pointer;
-    border: none; background: transparent; color: var(--muted);
+    font-family: var(--sans); font-size: 14px; font-weight: 400;
+    min-height: 44px; padding: 0 14px; border-radius: 16px; cursor: pointer;
+    border: none; background: transparent; color: var(--tf-ink); opacity: 0.7;
+    transition: opacity var(--enter) var(--ease), font-weight var(--enter) var(--ease);
   }
-  .mode-chip.on { background: var(--surface); color: var(--teal); box-shadow: 0 1px 4px rgba(23, 51, 60, 0.14); }
-  .dock-divider { width: 1px; height: 24px; background: var(--line); margin: 0 8px; }
-  .dock-links { display: flex; align-items: center; gap: 2px; }
+  .mode-chip.on { font-weight: 600; opacity: 1; }
+  .dock-divider { width: 1px; height: 24px; background: rgba(51, 64, 107, 0.18); margin: 0 6px; }
+  .dock-links { display: flex; align-items: center; }
   .dock-links a {
-    font-size: 14.5px; color: var(--ink);
-    padding: 8px 14px; border-radius: 999px;
-    white-space: nowrap;
+    font-size: 14px; font-weight: 500; color: var(--tf-ink);
+    min-height: 44px; display: inline-flex; align-items: center;
+    padding: 0 14px; border-radius: 16px; white-space: nowrap;
+    transition: background var(--enter) var(--ease);
   }
-  .dock-links a:hover { background: color-mix(in srgb, var(--ground) 80%, transparent); }
+  .dock-links a:hover { background: rgba(255, 255, 255, 0.55); }
+  .dock-login { text-decoration: underline; text-underline-offset: 3px; }
   .dock-cta {
-    font-family: var(--display); letter-spacing: 0.06em; font-size: 14px;
-    padding: 9px 18px; border-radius: 999px;
-    background: var(--coral); color: #fff;
-    box-shadow: 0 4px 14px rgba(233, 80, 47, 0.30);
-    white-space: nowrap;
+    font-size: 14px; font-weight: 500; color: var(--tf-ink);
+    border: 1px solid var(--tf-ink); background: transparent;
+    min-height: 44px; display: inline-flex; align-items: center;
+    padding: 0 18px; border-radius: 16px; white-space: nowrap; margin-left: 4px;
   }
-  .dock-cta:hover { background: #D14024; }
+  .dock-cta:hover { background: rgba(255, 255, 255, 0.55); }
 
-  /* ---------- sections ---------- */
-  section { padding: 88px 0; border-top: 1px solid var(--line); }
-  .kicker {
-    font-family: var(--mono); font-size: 13px; letter-spacing: 0.22em;
-    text-transform: uppercase; color: var(--coral); margin-bottom: 14px;
-  }
+  /* ---------- paper sections (§4: elevation = border, no shadow) ---------- */
+  section { padding: 88px 0; }
+  section + section { border-top: 1px solid var(--tf-border); }
+  section .eyebrow { opacity: 0.75; margin-bottom: 12px; }
   h2 {
-    font-family: var(--display); font-size: clamp(30px, 3.6vw, 44px);
-    line-height: 1.1; letter-spacing: 0.01em; text-wrap: balance;
-    margin-bottom: 14px;
+    font-size: clamp(26px, 3vw, 34px); line-height: 1.15;
+    font-weight: 500; letter-spacing: -0.02em; text-wrap: balance;
+    margin-bottom: 12px;
   }
-  .section-lede { color: var(--muted); max-width: 38em; margin-bottom: 44px; }
+  .section-lede { max-width: 40em; margin-bottom: 44px; opacity: 0.85; }
 
-  .mode-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .mode-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
   .mode-card {
-    background: var(--surface); border: 1px solid var(--line);
-    border-radius: 14px; padding: 22px 20px; min-height: 190px;
+    background: var(--tf-white); border: 1px solid var(--tf-border);
+    border-radius: 16px; padding: 14px 16px 18px; min-height: 180px;
     display: flex; flex-direction: column; gap: 10px;
-    box-shadow: 0 2px 10px rgba(23, 51, 60, 0.05);
-    transition: transform 0.18s ease, border-color 0.18s ease;
+    transition: transform var(--enter) var(--ease), border-color var(--enter) var(--ease);
   }
-  .mode-card:hover { transform: translateY(-4px); border-color: var(--teal); }
-  .mode-swatch { width: 100%; height: 64px; border-radius: 8px; }
-  .mode-card h3 { font-family: var(--display); font-size: 19px; letter-spacing: 0.04em; }
-  .mode-card p { color: var(--muted); font-size: 14.5px; line-height: 1.5; }
-  .sw-cartoon { background: linear-gradient(120deg, #3FA76B 0% 34%, #5FC488 34% 55%, #4B8FD9 55% 100%); }
-  .sw-clay { background: linear-gradient(120deg, #D8A878 0% 40%, #B8CC9C 40% 62%, #93B9CF 62% 100%); }
-  .sw-satellite { background: linear-gradient(120deg, #37522F 0% 30%, #66754A 30% 52%, #24486A 52% 100%); }
-  .sw-photoreal { background: linear-gradient(120deg, #8494A6 0% 30%, #B3C0CD 30% 58%, #4A5F78 58% 100%); }
+  .mode-card:hover { transform: translateY(-2px); border-color: var(--tf-ink); }
+  .mode-swatch { width: 100%; height: 64px; border-radius: 10px; }
+  .mode-card h3 { font-size: 20px; line-height: 1.25; font-weight: 500; letter-spacing: -0.01em; }
+  .mode-card p { font-size: 13px; line-height: 1.5; opacity: 0.85; }
+  .sw-cartoon { background: linear-gradient(120deg, #A8D8BC 0% 34%, #C9E6D8 34% 55%, #B9CDF5 55% 100%); }
+  .sw-clay { background: linear-gradient(120deg, #E8CBA8 0% 40%, #D6E4C9 40% 62%, #C4D5EE 62% 100%); }
+  .sw-satellite { background: linear-gradient(120deg, #55684A 0% 30%, #7A8A5E 30% 52%, #33406B 52% 100%); }
+  .sw-photoreal { background: linear-gradient(120deg, #98A6BC 0% 30%, #C3CDDD 30% 58%, #5D6E8C 58% 100%); }
 
   .feature-row { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
   .feature-row + .feature-row { margin-top: 84px; }
   .feature-row.flip .feature-art { order: 2; }
   .feature-art {
-    background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
-    padding: 26px; min-height: 240px;
-    box-shadow: 0 2px 12px rgba(23, 51, 60, 0.06);
+    background: var(--tf-white); border: 1px solid var(--tf-border);
+    border-radius: 16px; padding: 20px; min-height: 220px;
   }
-  .lens-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+
+  /* Tags (§5 status tag recipe: radius 999, padding 7x14, ink label 13). */
+  .lens-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
   .chip {
-    font-family: var(--mono); font-size: 13px; padding: 7px 15px;
-    border-radius: 999px; border: 1px solid var(--line); color: var(--muted);
-    background: var(--ground);
+    font-size: 13px; color: var(--tf-ink); padding: 7px 14px;
+    border-radius: 999px; border: 1px solid var(--tf-border); background: var(--tf-white);
   }
-  .chip.on { border-color: var(--teal); color: var(--teal); background: var(--teal-soft); }
+  .chip.on { background: var(--tf-mint); border-color: var(--tf-mint); font-weight: 500; }
   .dest-line {
     display: flex; justify-content: space-between; padding: 11px 4px;
-    border-bottom: 1px solid var(--line); font-size: 15px;
+    border-bottom: 1px solid var(--tf-border); font-size: 15px;
   }
-  .dest-line span:last-child { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+  .dest-line span:last-child { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; opacity: 0.7; align-self: center; }
 
-  .timeline-strip { display: flex; gap: 10px; align-items: stretch; margin-top: 8px; }
+  .timeline-strip { display: flex; gap: 8px; align-items: stretch; margin-top: 8px; }
   .day-block {
-    flex: 1; border-radius: 10px; padding: 12px 10px 14px;
-    font-family: var(--mono); font-size: 12px; line-height: 1.5;
+    flex: 1; border-radius: 12px; padding: 10px 10px 12px;
+    font-size: 13px; line-height: 1.5; color: var(--tf-ink);
   }
-  .day-block b { display: block; font-size: 13px; letter-spacing: 0.08em; margin-bottom: 4px; }
-  .day-stay { background: var(--teal-soft); border: 1px solid var(--teal); color: #0A6560; }
-  .day-move { background: var(--coral-soft); border: 1px solid var(--coral); color: #B23A1D; }
+  .day-block b { display: block; font-weight: 600; margin-bottom: 2px; }
+  .day-block small { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; }
+  .day-stay { background: var(--tf-mint); }
+  .day-move { background: var(--tf-sky); }
 
-  .stat-row { display: flex; gap: 44px; margin-top: 30px; flex-wrap: wrap; }
+  .stat-row { display: flex; gap: 44px; margin-top: 28px; flex-wrap: wrap; }
   .stat b {
-    display: block; font-family: var(--display); font-size: 34px;
-    color: var(--coral); font-variant-numeric: tabular-nums;
+    display: block; font-size: 34px; line-height: 1.1; font-weight: 600;
+    letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
   }
-  .stat span { color: var(--muted); font-size: 14px; }
+  .stat span { font-size: 13px; opacity: 0.8; }
 
   /* ---------- about + cta ---------- */
   .about-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 56px; }
-  .about-grid p { color: var(--muted); margin-bottom: 16px; }
-  .cta-panel {
-    text-align: center; padding: 92px 24px;
-    background: radial-gradient(ellipse 60% 90% at 50% 100%, rgba(233, 80, 47, 0.10), transparent 70%);
-  }
-  .cta-panel h2 { margin-bottom: 12px; }
-  .cta-panel p { color: var(--muted); margin-bottom: 30px; }
+  .about-grid p { margin-bottom: 14px; opacity: 0.9; }
+  .cta-panel { text-align: center; padding: 92px 24px; border-top: 1px solid var(--tf-border); }
+  .cta-panel h2 { margin-bottom: 10px; }
+  .cta-panel p { opacity: 0.85; margin-bottom: 28px; }
 
-  footer { border-top: 1px solid var(--line); padding: 36px 0; background: var(--surface); }
+  footer { border-top: 1px solid var(--tf-border); padding: 34px 0; background: var(--tf-white); }
   .foot-inner { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
-  footer, footer a { color: var(--muted); font-size: 14px; }
-  footer a:hover { color: var(--ink); }
+  footer, footer a { font-size: 13px; opacity: 0.9; }
+  footer a:hover { text-decoration: underline; text-underline-offset: 3px; }
   .foot-links { display: flex; gap: 22px; }
 
-  /* ---------- motion ----------
-     One orchestrated entrance for the hero, quiet scroll reveals below it.
-     Everything here is stripped under prefers-reduced-motion. */
-  @keyframes rise-in {
-    from { opacity: 0; transform: translateY(18px); }
+  /* ---------- motion (§8: enter 160ms, panels 240ms, nothing longer) ---------- */
+  @keyframes panel-in {
+    from { opacity: 0; transform: translateY(12px); }
     to { opacity: 1; transform: none; }
   }
-  /* Centered elements keep their translateX in every keyframe — a generic
-     `transform: none` end state would silently un-center them. */
-  @keyframes dock-in {
-    from { opacity: 0; transform: translate(-50%, 18px); }
+  @keyframes panel-in-centered-y {
+    from { opacity: 0; transform: translateY(calc(-52% + 12px)); }
+    to { opacity: 1; transform: translateY(-52%); }
+  }
+  @keyframes panel-in-centered-x {
+    from { opacity: 0; transform: translate(-50%, 12px); }
     to { opacity: 1; transform: translate(-50%, 0); }
   }
   @keyframes fade-in {
     from { opacity: 0; }
     to { opacity: 1; }
   }
-  .hero-copy > * { animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
-  .hero-copy > *:nth-child(1) { animation-delay: 0.05s; }
-  .hero-copy > *:nth-child(2) { animation-delay: 0.16s; }
-  .hero-copy > *:nth-child(3) { animation-delay: 0.28s; }
-  .hero-copy > *:nth-child(4) { animation-delay: 0.42s; }
-  .hero-copy > *:nth-child(5) { animation-delay: 0.54s; }
-  .hero-dock { animation: dock-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.6s backwards; }
-  .globe-caption { animation: fade-in 0.9s ease 1.0s backwards; }
-  /* Scroll reveals: JS tags targets with .reveal (so the page is whole without
-     JS), then .in plays the entrance. `both` holds the hidden state through
-     the stagger delay; JS clears the animation once it finishes so hover
-     transforms (mode cards) are not pinned by the fill. */
+  .hero-card { animation: panel-in-centered-y var(--panel) var(--ease) backwards; }
+  .hero-dock { animation: panel-in-centered-x var(--panel) var(--ease) 120ms backwards; }
+  .globe-caption { animation: fade-in var(--panel) var(--ease) 200ms backwards; }
+  /* Scroll reveals: tagged from JS so the document is whole without it. */
   .reveal { opacity: 0; }
-  .reveal.in { animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0s) both; }
+  .reveal.in { animation: panel-in var(--panel) var(--ease) var(--reveal-delay, 0s) both; }
   .reveal.settled { animation: none; opacity: 1; }
-  /* Micro-interactions */
-  .btn, .dock-cta { transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease, color 0.18s ease; }
-  .btn-primary:hover, .dock-cta:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(233, 80, 47, 0.38); }
-  .btn-ghost:hover { transform: translateY(-2px); }
-  .mode-chip { transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease; }
-  .dock-links a { transition: background 0.18s ease; }
 
   @media (max-width: 860px) {
     .feature-row, .about-grid { grid-template-columns: 1fr; }
     .feature-row.flip .feature-art { order: 0; }
     .mode-grid { grid-template-columns: repeat(2, 1fr); }
-    /* Small screens: the dock keeps play + auth, section links wait below. */
     .dock-links.quiet, .dock-divider { display: none; }
     .globe-caption { display: none; }
-    /* Small screens: globe drops behind a stronger wash, copy reads on top. */
     .hero { min-height: 560px; }
     #globeEmbed { top: -20%; height: 140%; left: -30%; width: 160%; }
     .hero-wash {
       background: linear-gradient(180deg,
-        rgba(244, 248, 247, 0.94) 0%,
-        rgba(244, 248, 247, 0.75) 45%,
-        rgba(244, 248, 247, 0.0) 75%);
+        rgba(185, 205, 245, 0.85) 0%,
+        rgba(185, 205, 245, 0.55) 45%,
+        rgba(185, 205, 245, 0.0) 75%);
     }
-    .hero-copy { top: 24px; transform: none; left: 24px; right: 24px; max-width: none; }
+    .hero-card { top: 84px; transform: none; left: 16px; right: 16px; max-width: none; padding: 24px; animation-name: panel-in; }
   }
+  /* §8: under prefers-reduced-motion all movement becomes an opacity
+     cross-fade at 120ms. */
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
-    .mode-card, .mode-card:hover { transform: none; transition: none; }
-    .hero-copy > *, .hero-dock, .globe-caption { animation: none; }
-    .reveal, .reveal.in { animation: none; opacity: 1; }
-    .btn, .dock-cta, .btn-primary:hover, .dock-cta:hover, .btn-ghost:hover { transform: none; transition: none; }
+    .hero-card, .hero-dock, .globe-caption { animation: fade-in 120ms var(--ease) backwards; }
+    .reveal.in { animation: fade-in 120ms var(--ease) both; }
+    .btn, .mode-card, .btn:hover, .mode-card:hover { transform: none; transition: none; }
   }
 </style>
 </head>
@@ -355,7 +367,10 @@ const description =
 
 <nav>
   <div class="nav-inner">
-    <a class="logo" href="/"><span class="logo-mark"></span>TAIL FEATHERS</a>
+    <a class="logo" href="/">
+      <img src="/mark.svg" alt="" width="30" height="30" />
+      <span><span class="wm-tail">tail</span><span class="wm-feathers">Feathers</span></span>
+    </a>
   </div>
 </nav>
 
@@ -363,23 +378,23 @@ const description =
   <div id="globeEmbed"></div>
   <div class="globe-boot" id="globeBoot">LOADING THE WORLD…</div>
   <div class="hero-wash"></div>
-  <div class="hero-copy">
+  <div class="hero-card">
     <p class="eyebrow">A new way to plan travel</p>
-    <h1>Spin the globe.<br><span class="coral">Plan the trip.</span></h1>
-    <p class="lede">Tail Feathers turns trip planning into play — a living 3D globe with
+    <h1>Spin the globe.<br /><span class="light">Plan the trip.</span></h1>
+    <p class="lede">tailFeathers turns trip planning into play — a living 3D globe with
       curated destinations, real flights and roads, and a timeline you build by touch.
       No spreadsheets. No forty open tabs.</p>
     <div class="hero-cta">
-      <a class="btn btn-primary" href="#">Start exploring — it's free</a>
-      <a class="btn btn-ghost" href="#modes">See the globe</a>
+      <a class="btn btn-signal" href="#">Start exploring — it's free</a>
+      <a class="btn btn-secondary" href="#modes">See the globe</a>
     </div>
     <p class="hero-note">Runs in your browser · nothing to install</p>
   </div>
-  <span class="globe-caption">LIVE — DRAG TO SPIN</span>
+  <span class="globe-caption">Live — drag to spin</span>
   <div class="hero-dock">
     <div class="dock-toggle">
-      <button class="mode-chip on" type="button" data-mode="clay">CARTOON</button>
-      <button class="mode-chip" type="button" data-mode="stylized">MAP</button>
+      <button class="mode-chip on" type="button" data-mode="clay">Cartoon</button>
+      <button class="mode-chip" type="button" data-mode="stylized">Map</button>
     </div>
     <span class="dock-divider"></span>
     <div class="dock-links quiet">
@@ -389,7 +404,7 @@ const description =
     </div>
     <span class="dock-divider"></span>
     <div class="dock-links">
-      <a href="#">Log in</a>
+      <a class="dock-login" href="#">Log in</a>
     </div>
     <a class="dock-cta" href="#">Start free</a>
   </div>
@@ -397,7 +412,7 @@ const description =
 
 <section id="modes">
   <div class="wrap">
-    <p class="kicker">Four globes in one</p>
+    <p class="eyebrow">Four globes in one</p>
     <h2>Pick the planet that fits your mood</h2>
     <p class="section-lede">Every mode is the same living world — your trips, lenses and
       timeline carry across all of them.</p>
@@ -428,7 +443,7 @@ const description =
 
 <section id="plan">
   <div class="wrap">
-    <p class="kicker">Curated, not crowdsourced</p>
+    <p class="eyebrow">Curated, not crowdsourced</p>
 
     <div class="feature-row">
       <div>
@@ -447,12 +462,12 @@ const description =
         <div class="lens-chips">
           <span class="chip on">Beaches</span><span class="chip">Food</span>
           <span class="chip">Culture</span><span class="chip">Adventure</span>
-          <span class="chip on">· September</span>
+          <span class="chip on">September</span>
         </div>
-        <div class="dest-line"><span>Navagio Cove</span><span>36.99° N — RANK 1</span></div>
-        <div class="dest-line"><span>Praia da Marinha</span><span>37.09° N — RANK 2</span></div>
-        <div class="dest-line"><span>Whitehaven Beach</span><span>20.28° S — RANK 3</span></div>
-        <div class="dest-line" style="border:none"><span>Anse Source d'Argent</span><span>4.37° S — RANK 4</span></div>
+        <div class="dest-line"><span>Navagio Cove</span><span>36.99° N · RANK 1</span></div>
+        <div class="dest-line"><span>Praia da Marinha</span><span>37.09° N · RANK 2</span></div>
+        <div class="dest-line"><span>Whitehaven Beach</span><span>20.28° S · RANK 3</span></div>
+        <div class="dest-line" style="border:none"><span>Anse Source d'Argent</span><span>4.37° S · RANK 4</span></div>
       </div>
     </div>
 
@@ -465,13 +480,13 @@ const description =
           and real driving roads, not straight lines.</p>
       </div>
       <div class="feature-art">
-        <p style="font-family:var(--mono); font-size:12px; letter-spacing:0.16em; color:var(--muted); margin-bottom:14px">TRIP — LISBON LOOP · 9 DAYS</p>
+        <p class="eyebrow" style="margin-bottom:12px">Trip — Lisbon loop · 9 days</p>
         <div class="timeline-strip">
-          <div class="day-block day-stay" style="flex:3"><b>LISBON</b>3 nights</div>
-          <div class="day-block day-move" style="flex:1"><b>DRIVE</b>2h 40m</div>
-          <div class="day-block day-stay" style="flex:2"><b>LAGOS</b>2 nights</div>
-          <div class="day-block day-move" style="flex:1"><b>FLIGHT</b>TP 1904</div>
-          <div class="day-block day-stay" style="flex:3"><b>MADEIRA</b>3 nights</div>
+          <div class="day-block day-stay" style="flex:3"><b>Lisbon</b><small>3 NIGHTS</small></div>
+          <div class="day-block day-move" style="flex:1"><b>Drive</b><small>2H 40M</small></div>
+          <div class="day-block day-stay" style="flex:2"><b>Lagos</b><small>2 NIGHTS</small></div>
+          <div class="day-block day-move" style="flex:1"><b>Flight</b><small>TP 1904</small></div>
+          <div class="day-block day-stay" style="flex:3"><b>Madeira</b><small>3 NIGHTS</small></div>
         </div>
       </div>
     </div>
@@ -481,9 +496,9 @@ const description =
 <section id="about">
   <div class="wrap about-grid">
     <div>
-      <p class="kicker">About us</p>
+      <p class="eyebrow">About us</p>
       <h2>Built by people who plan trips for fun</h2>
-      <p>Tail Feathers started with a simple complaint: planning a trip is the best part of
+      <p>tailFeathers started with a simple complaint: planning a trip is the best part of
         travelling, and every tool treats it like filing taxes. We wanted the feeling of
         spinning a globe in a library — wonder first, logistics second.</p>
       <p>So we built our own globe engine from scratch, curated every destination by hand, and
@@ -491,10 +506,10 @@ const description =
         outputs a trip you can actually take.</p>
     </div>
     <div class="feature-art">
-      <p style="font-family:var(--mono); font-size:13px; color:var(--teal); letter-spacing:0.14em; margin-bottom:16px">FIELD NOTES</p>
-      <p style="color:var(--muted); font-size:15px">"We rebuilt the coastlines four times until
+      <p class="eyebrow" style="margin-bottom:14px">Field notes</p>
+      <p class="small" style="opacity:0.85">"We rebuilt the coastlines four times until
         the cartoon mode felt right. The Baltic kept turning the wrong shade of blue. Worth it."</p>
-      <p style="color:var(--muted); font-size:13px; margin-top:14px; font-family:var(--mono)">— the Tail Feathers engine team</p>
+      <p class="eyebrow" style="margin-top:14px; opacity:0.6">— the tailFeathers engine team</p>
     </div>
   </div>
 </section>
@@ -503,13 +518,13 @@ const description =
   <div class="wrap">
     <h2>The world is loaded. Your move.</h2>
     <p>Free to start — your first trip takes about ten minutes to plan.</p>
-    <a class="btn btn-primary" href="#">Create your account</a>
+    <a class="btn btn-paper" href="#">Create your account</a>
   </div>
 </div>
 
 <footer>
   <div class="wrap foot-inner">
-    <span>© 2026 Tail Feathers. Map data © OpenStreetMap contributors.</span>
+    <span>© 2026 tailFeathers. Map data © OpenStreetMap contributors.</span>
     <div class="foot-links">
       <a href="#about">About</a><a href="#">Privacy</a><a href="#">Terms</a><a href="#">Contact</a>
     </div>
@@ -571,26 +586,22 @@ const description =
     });
   }
 
-  // ---------- scroll motion ----------
-  // Reveal classes are applied FROM JS so the document is complete without it
-  // (crawlers and no-JS readers see everything; motion is pure enhancement).
-  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (!reducedMotion && 'IntersectionObserver' in window) {
-    // Block-level targets only, never an element inside another target —
-    // nested reveals compound their translations and read as lag.
+  // ---------- scroll motion (spec §8: 240ms panels, reduced-motion handled
+  // in CSS as a 120ms fade) ----------
+  // Reveal classes are applied FROM JS so the document is complete without it.
+  if ('IntersectionObserver' in window) {
     const targets = document.querySelectorAll(
-      '#modes .kicker, #modes h2, #modes .section-lede, .mode-card, ' +
+      '#modes .eyebrow, #modes h2, #modes .section-lede, .mode-card, ' +
         '.feature-row > *, .about-grid > *, .cta-panel h2, .cta-panel p, .cta-panel .btn',
     );
     for (const el of targets) {
       el.classList.add('reveal');
-      // Once the entrance finishes, drop the animation so its forwards-fill
-      // cannot pin `transform` and swallow hover lifts (the mode cards).
+      // Clear the finished animation so its forwards-fill cannot pin
+      // transforms and swallow the card hover lift.
       el.addEventListener('animationend', () => el.classList.add('settled'), { once: true });
     }
-    // Stagger siblings that arrive as a group.
     document.querySelectorAll('.mode-grid .mode-card').forEach((el, i) => {
-      el.style.setProperty('--reveal-delay', `${i * 90}ms`);
+      el.style.setProperty('--reveal-delay', `${i * 60}ms`);
     });
     const io = new IntersectionObserver(
       (entries) => {
@@ -603,36 +614,6 @@ const description =
       { threshold: 0.15, rootMargin: '0px 0px -48px 0px' },
     );
     for (const el of targets) io.observe(el);
-
-    // Count the stats up from zero as they arrive.
-    const countUp = (el) => {
-      const raw = el.textContent;
-      const target = parseInt(raw.replace(/[^0-9]/g, ''), 10);
-      if (!Number.isFinite(target)) return;
-      const grouped = raw.includes(',');
-      const t0 = performance.now();
-      const duration = 1200;
-      const frame = (t) => {
-        const p = Math.min(1, (t - t0) / duration);
-        const eased = 1 - Math.pow(1 - p, 3);
-        const value = Math.round(target * eased);
-        el.textContent = grouped ? value.toLocaleString('en-US') : String(value);
-        if (p < 1) requestAnimationFrame(frame);
-      };
-      requestAnimationFrame(frame);
-    };
-    const statRow = document.querySelector('.stat-row');
-    if (statRow) {
-      const statIo = new IntersectionObserver(
-        (entries) => {
-          if (!entries.some((entry) => entry.isIntersecting)) return;
-          statIo.disconnect();
-          statRow.querySelectorAll('.stat b').forEach(countUp);
-        },
-        { threshold: 0.4 },
-      );
-      statIo.observe(statRow);
-    }
   }
 </script>
 </body>
