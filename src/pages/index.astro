@@ -657,7 +657,11 @@ const description =
     if (event.type === 'error') console.error('[globe]', event.payload.message);
   };
 
-  mount(document.getElementById('globeEmbed'));
+  // backdrop: false — the engine's CSS sky (pastel mesh + aurora) stays off, so
+  // the transparent canvas floats the planet directly on the page's butter
+  // field. The hero wash doubles as the legibility scrim where copy crosses
+  // the sphere.
+  mount(document.getElementById('globeEmbed'), { backdrop: false });
 
   // The header floats transparent over the hero; past the hero's foot it needs
   // a surface of its own to stay readable over the page content.
