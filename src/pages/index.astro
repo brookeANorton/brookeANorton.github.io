@@ -158,18 +158,12 @@ const description =
   }
   #globeEmbed {
     position: absolute; top: -32%; height: 164%;
-    left: 4%; width: 140%;
+    left: 10%; width: 140%;
   }
-  /* Managed scrim so ink and glass stay legible over the imagery we control
-     (§4, §6) — sky-tinted, fading into the planet. */
-  .hero-wash {
-    position: absolute; inset: 0; z-index: 2; pointer-events: none;
-    background: linear-gradient(90deg,
-      rgba(255, 224, 138, 0.96) 0%,
-      rgba(255, 224, 138, 0.72) 42%,
-      rgba(255, 224, 138, 0.30) 60%,
-      rgba(255, 224, 138, 0.0) 74%);
-  }
+  /* Desktop: NO veil over the planet — the field is already butter, and copy
+     that crosses the limb is carried by its own text halo instead. The wash
+     only returns on small screens, where the copy sits fully on the sphere. */
+  .hero-wash { display: none; }
   /* Bare copy over the field — the wash below carries legibility. The block
      ignores the pointer so the globe stays draggable through it; only the
      buttons and links catch input. */
@@ -181,6 +175,15 @@ const description =
   }
   .hero-card a, .hero-card .btn { pointer-events: auto; }
   .hero-card .eyebrow { color: var(--tf-ink); opacity: 0.75; }
+  /* A butter halo hugging the letterforms: invisible butter-on-butter, and it
+     keeps the words legible where they cross the planet's limb — without a
+     veil overlaying the globe itself. */
+  .hero-card h1, .hero-card .lede, .hero-card .eyebrow, .hero-card .hero-note {
+    text-shadow:
+      0 1px 0 rgba(255, 224, 138, 0.9),
+      0 0 10px rgba(255, 224, 138, 0.95),
+      0 0 22px rgba(255, 224, 138, 0.8);
+  }
   h1 {
     font-size: clamp(40px, 5vw, 64px); line-height: 1.08;
     font-weight: 500; letter-spacing: -0.02em; text-wrap: balance;
@@ -404,10 +407,12 @@ const description =
     .hero { min-height: 560px; }
     #globeEmbed { top: -20%; height: 140%; left: -30%; width: 160%; }
     .hero-wash {
+      display: block;
+      position: absolute; inset: 0; z-index: 2; pointer-events: none;
       background: linear-gradient(180deg,
-        rgba(185, 205, 245, 0.85) 0%,
-        rgba(185, 205, 245, 0.55) 45%,
-        rgba(185, 205, 245, 0.0) 75%);
+        rgba(255, 224, 138, 0.85) 0%,
+        rgba(255, 224, 138, 0.55) 45%,
+        rgba(255, 224, 138, 0.0) 75%);
     }
     .hero-card { top: 84px; transform: none; left: 24px; right: 24px; max-width: none; animation-name: panel-in; }
   }
