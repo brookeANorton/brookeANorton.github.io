@@ -288,15 +288,66 @@ const description =
   }
   .dest-line span:last-child { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; opacity: 0.7; align-self: center; }
 
-  .timeline-strip { display: flex; gap: 8px; align-items: stretch; margin-top: 8px; }
+  /* ---------- the timeline editor demo ---------- */
+  .editor {
+    background: var(--tf-white); border: 1px solid var(--tf-border-warm);
+    border-radius: 16px; padding: 20px 20px 14px;
+    overflow-x: auto;
+  }
+  .editor-head {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    margin-bottom: 14px; min-width: 560px;
+  }
+  .tag-mint {
+    background: var(--tf-mint); color: var(--tf-ink);
+    font-size: 13px; font-weight: 500; padding: 7px 14px; border-radius: 999px;
+  }
+  .tl-strip { display: flex; gap: 8px; align-items: stretch; min-width: 560px; }
   .day-block {
-    flex: 1; border-radius: 12px; padding: 10px 10px 12px;
-    font-size: 13px; line-height: 1.5; color: var(--tf-ink);
+    position: relative;
+    flex: 1; border-radius: 12px; padding: 14px 14px 16px;
+    font-size: 15px; line-height: 1.5; color: var(--tf-ink);
+    min-height: 88px;
+    transition: flex-grow var(--enter) var(--ease);
   }
   .day-block b { display: block; font-weight: 600; margin-bottom: 2px; }
   .day-block small { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; }
   .day-stay { background: var(--tf-butter); }
   .day-move { background: var(--tf-sky); }
+  .tl-handle {
+    position: absolute; top: 8px; bottom: 8px; right: 4px; width: 18px;
+    border: none; border-radius: 9px; cursor: ew-resize; touch-action: none;
+    background:
+      radial-gradient(circle, rgba(51, 64, 107, 0.5) 1.2px, transparent 1.4px)
+      center / 6px 7px round;
+    opacity: 0.55; transition: opacity var(--enter) var(--ease);
+  }
+  .tl-handle:hover, .tl-handle:focus-visible { opacity: 1; }
+  .tl-add {
+    position: absolute; top: 8px; right: 8px; width: 36px; height: 36px;
+    border: 1px solid var(--tf-ink); border-radius: 999px;
+    background: var(--tf-white); color: var(--tf-ink);
+    font-size: 18px; line-height: 1; font-weight: 500; cursor: pointer;
+    transition: transform var(--enter) var(--ease);
+  }
+  .tl-add:hover { transform: translateY(-1px); }
+  .day-trip { display: flex; align-items: center; gap: 12px; margin-top: 10px; min-width: 560px; }
+  .day-trip[hidden] { display: none; }
+  .day-trip:not([hidden]) { animation: panel-in var(--enter) var(--ease) backwards; }
+  .dt-elbow { opacity: 0.6; white-space: nowrap; }
+  .dt-card {
+    flex: 1; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+    background: var(--tf-mist); border-radius: 12px; padding: 12px 14px;
+  }
+  .dt-card b { font-weight: 600; }
+  .editor-hint { margin-top: 12px; opacity: 0.55; }
+  .plan-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 24px; }
+  .step-card {
+    background: var(--tf-white); border: 1px solid var(--tf-border-warm);
+    border-radius: 16px; padding: 14px 16px 18px;
+  }
+  .step-card h3 { font-size: 20px; line-height: 1.25; font-weight: 500; letter-spacing: -0.01em; margin-bottom: 6px; }
+  .step-card p { font-size: 13px; line-height: 1.5; opacity: 0.85; }
 
   .stat-row { display: flex; gap: 44px; margin-top: 28px; flex-wrap: wrap; }
   .stat b {
@@ -347,6 +398,7 @@ const description =
     .feature-row, .about-grid { grid-template-columns: 1fr; }
     .feature-row.flip .feature-art { order: 0; }
     .mode-grid { grid-template-columns: repeat(2, 1fr); }
+    .plan-steps { grid-template-columns: 1fr; }
     .dock-links.quiet, .dock-divider { display: none; }
     .globe-caption { display: none; }
     .hero { min-height: 560px; }
@@ -416,41 +468,67 @@ const description =
   </div>
 </header>
 
-<section id="modes">
+<section id="plan">
   <div class="wrap">
-    <p class="eyebrow">Four globes in one</p>
-    <h2>Pick the planet that fits your mood</h2>
-    <p class="section-lede">Every mode is the same living world — your trips, lenses and
-      timeline carry across all of them.</p>
-    <div class="mode-grid">
-      <div class="mode-card">
-        <div class="mode-swatch sw-cartoon"></div>
-        <h3>Cartoon terrain</h3>
-        <p>Hand-styled mountains and coasts, built live from real elevation data.</p>
+    <p class="eyebrow sec-head">The planning half</p>
+    <h2 class="sec-head">Your whole trip lives in one strip</h2>
+    <p class="section-lede sec-head">The timeline docks under the globe. This one works —
+      drag the right edge of Lisbon to trade nights with Lagos, and tap + to hang a
+      day trip off a stop.</p>
+
+    <div class="editor">
+      <div class="editor-head">
+        <span class="eyebrow">Voyage Nº 7 — Lisbon loop · 9 days</span>
+        <span class="tag-mint">Synced</span>
       </div>
-      <div class="mode-card">
-        <div class="mode-swatch sw-clay"></div>
-        <h3>Clay</h3>
-        <p>A soft, sculpted look you can retune in-app — your globe, your palette.</p>
+      <div class="tl-strip">
+        <div class="day-block day-stay" id="stayLisbon" style="flex:3">
+          <b>Lisbon</b><small id="lisbonNights">3 NIGHTS</small>
+          <button class="tl-handle" id="lisbonHandle" type="button"
+            aria-label="Adjust nights between Lisbon and Lagos (arrow keys)"></button>
+        </div>
+        <div class="day-block day-move" style="flex:1"><b>Drive</b><small>2H 40M</small></div>
+        <div class="day-block day-stay" id="stayLagos" style="flex:2">
+          <b>Lagos</b><small id="lagosNights">2 NIGHTS</small>
+          <button class="tl-add" id="addDayTrip" type="button" aria-expanded="false"
+            aria-label="Add a day trip to Lagos">+</button>
+        </div>
+        <div class="day-block day-move" style="flex:1"><b>Flight</b><small>TP 1904</small></div>
+        <div class="day-block day-stay" style="flex:3"><b>Madeira</b><small>3 NIGHTS</small></div>
       </div>
-      <div class="mode-card">
-        <div class="mode-swatch sw-satellite"></div>
-        <h3>Satellite</h3>
-        <p>Real imagery when you want to see the actual place from above.</p>
+      <div class="day-trip" id="dayTrip" hidden>
+        <span class="dt-elbow eyebrow">↳ hangs off Lagos</span>
+        <div class="dt-card">
+          <b>Benagil sea caves</b>
+          <span class="small">9:00–16:00 · boat from Lagos marina · back for dinner</span>
+        </div>
       </div>
-      <div class="mode-card">
-        <div class="mode-swatch sw-photoreal"></div>
-        <h3>Photoreal 3D</h3>
-        <p>Fly through cities in full photorealistic 3D before you ever land.</p>
+      <p class="editor-hint eyebrow">Try it — drag Lisbon's edge · tap + on Lagos</p>
+    </div>
+
+    <div class="plan-steps">
+      <div class="step-card">
+        <h3>Stretch a stay</h3>
+        <p>Drag a stop's edge and the nights rebalance around it — no forms, no date
+          pickers, the whole trip stays consistent.</p>
+      </div>
+      <div class="step-card">
+        <h3>Hang a day trip</h3>
+        <p>One tap on any stay pins an excursion under it, without breaking the flow
+          of the main route.</p>
+      </div>
+      <div class="step-card">
+        <h3>Legs draw themselves</h3>
+        <p>Real flight schedules and true driving roads appear between the days —
+          never straight lines through the sea.</p>
       </div>
     </div>
   </div>
 </section>
 
-<section id="plan">
+<section id="lenses">
   <div class="wrap">
-    <p class="eyebrow">Curated, not crowdsourced</p>
-
+    <p class="eyebrow sec-head">Curated, not crowdsourced</p>
     <div class="feature-row">
       <div>
         <h2>Lenses that answer "where next?"</h2>
@@ -476,24 +554,35 @@ const description =
         <div class="dest-line" style="border:none"><span>Anse Source d'Argent</span><span>4.37° S · RANK 4</span></div>
       </div>
     </div>
+  </div>
+</section>
 
-    <div class="feature-row flip">
-      <div>
-        <h2>A timeline you can feel</h2>
-        <p class="section-lede" style="margin-bottom:0">Your trip lives on a dock at the bottom
-          of the globe. Drag stays to stretch them, tap + to hang a day trip off any stop, and
-          watch flights and road routes draw themselves between the days — with real schedules
-          and real driving roads, not straight lines.</p>
+<section id="modes">
+  <div class="wrap">
+    <p class="eyebrow sec-head">Four globes in one</p>
+    <h2 class="sec-head">Pick the planet that fits your mood</h2>
+    <p class="section-lede sec-head">Every mode is the same living world — your trips, lenses and
+      timeline carry across all of them.</p>
+    <div class="mode-grid">
+      <div class="mode-card">
+        <div class="mode-swatch sw-cartoon"></div>
+        <h3>Cartoon terrain</h3>
+        <p>Hand-styled mountains and coasts, built live from real elevation data.</p>
       </div>
-      <div class="feature-art">
-        <p class="eyebrow" style="margin-bottom:12px">Trip — Lisbon loop · 9 days</p>
-        <div class="timeline-strip">
-          <div class="day-block day-stay" style="flex:3"><b>Lisbon</b><small>3 NIGHTS</small></div>
-          <div class="day-block day-move" style="flex:1"><b>Drive</b><small>2H 40M</small></div>
-          <div class="day-block day-stay" style="flex:2"><b>Lagos</b><small>2 NIGHTS</small></div>
-          <div class="day-block day-move" style="flex:1"><b>Flight</b><small>TP 1904</small></div>
-          <div class="day-block day-stay" style="flex:3"><b>Madeira</b><small>3 NIGHTS</small></div>
-        </div>
+      <div class="mode-card">
+        <div class="mode-swatch sw-clay"></div>
+        <h3>Clay</h3>
+        <p>A soft, sculpted look you can retune in-app — your globe, your palette.</p>
+      </div>
+      <div class="mode-card">
+        <div class="mode-swatch sw-satellite"></div>
+        <h3>Satellite</h3>
+        <p>Real imagery when you want to see the actual place from above.</p>
+      </div>
+      <div class="mode-card">
+        <div class="mode-swatch sw-photoreal"></div>
+        <h3>Photoreal 3D</h3>
+        <p>Fly through cities in full photorealistic 3D before you ever land.</p>
       </div>
     </div>
   </div>
@@ -592,13 +681,69 @@ const description =
     });
   }
 
+  // ---------- the timeline editor demo ----------
+  // The two signature interactions, real on the page: drag a stay's edge to
+  // trade nights with its neighbour, tap + to hang a day trip off a stop.
+  {
+    const lisbon = document.getElementById('stayLisbon');
+    const lagos = document.getElementById('stayLagos');
+    const lisbonLabel = document.getElementById('lisbonNights');
+    const lagosLabel = document.getElementById('lagosNights');
+    const handle = document.getElementById('lisbonHandle');
+    const SHARED_NIGHTS = 5; // Lisbon + Lagos trade within this pool
+    const PX_PER_NIGHT = 48;
+    let nights = 3;
+    const nightsText = (n) => `${n} NIGHT${n === 1 ? '' : 'S'}`;
+    const apply = () => {
+      lisbon.style.flex = String(nights);
+      lagos.style.flex = String(SHARED_NIGHTS - nights);
+      lisbonLabel.textContent = nightsText(nights);
+      lagosLabel.textContent = nightsText(SHARED_NIGHTS - nights);
+    };
+    let dragFromX = null;
+    let dragFromNights = nights;
+    handle.addEventListener('pointerdown', (event) => {
+      dragFromX = event.clientX;
+      dragFromNights = nights;
+      handle.setPointerCapture(event.pointerId);
+    });
+    handle.addEventListener('pointermove', (event) => {
+      if (dragFromX === null) return;
+      const moved = Math.round((event.clientX - dragFromX) / PX_PER_NIGHT);
+      nights = Math.min(4, Math.max(1, dragFromNights + moved));
+      apply();
+    });
+    for (const end of ['pointerup', 'pointercancel']) {
+      handle.addEventListener(end, () => { dragFromX = null; });
+    }
+    handle.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      event.preventDefault();
+      nights = Math.min(4, Math.max(1, nights + (event.key === 'ArrowRight' ? 1 : -1)));
+      apply();
+    });
+
+    const addButton = document.getElementById('addDayTrip');
+    const dayTrip = document.getElementById('dayTrip');
+    addButton.addEventListener('click', () => {
+      const showing = dayTrip.hidden;
+      dayTrip.hidden = !showing;
+      addButton.textContent = showing ? '×' : '+';
+      addButton.setAttribute('aria-expanded', String(showing));
+      addButton.setAttribute(
+        'aria-label',
+        showing ? 'Remove the Lagos day trip' : 'Add a day trip to Lagos',
+      );
+    });
+  }
+
   // ---------- scroll motion (spec §8: 240ms panels, reduced-motion handled
   // in CSS as a 120ms fade) ----------
   // Reveal classes are applied FROM JS so the document is complete without it.
   if ('IntersectionObserver' in window) {
     const targets = document.querySelectorAll(
-      '#modes .eyebrow, #modes h2, #modes .section-lede, .mode-card, ' +
-        '.feature-row > *, .about-grid > *, .cta-panel h2, .cta-panel p, .cta-panel .btn',
+      '.sec-head, .mode-card, .feature-row > *, .editor, .plan-steps > *, ' +
+        '.about-grid > *, .cta-panel h2, .cta-panel p, .cta-panel .btn',
     );
     for (const el of targets) {
       el.classList.add('reveal');
@@ -607,6 +752,9 @@ const description =
       el.addEventListener('animationend', () => el.classList.add('settled'), { once: true });
     }
     document.querySelectorAll('.mode-grid .mode-card').forEach((el, i) => {
+      el.style.setProperty('--reveal-delay', `${i * 60}ms`);
+    });
+    document.querySelectorAll('.plan-steps .step-card').forEach((el, i) => {
       el.style.setProperty('--reveal-delay', `${i * 60}ms`);
     });
     const io = new IntersectionObserver(
