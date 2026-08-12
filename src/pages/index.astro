@@ -652,6 +652,18 @@ const description =
         type: 'flyTo',
         payload: { latitude: 24, longitude: -18, altitude: 8500000, pitch: -90 },
       });
+      // A slow idle spin — one rotation in four minutes. The engine skips it
+      // while the flight above is running and stops it for good on the first
+      // drag, so this can be sent immediately.
+      //
+      // Gated on reduced motion: a permanently rotating planet is motion, and
+      // the design spec (§8) makes honouring that setting mandatory.
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        window.Globe.receive({
+          type: 'setAutoRotate',
+          payload: { degreesPerSecond: 1.5 },
+        });
+      }
       boot.style.opacity = '0';
     }
     if (event.type === 'modeChanged') {
