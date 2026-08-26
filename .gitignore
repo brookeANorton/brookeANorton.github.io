@@ -2,7 +2,9 @@ node_modules/
 dist/
 .astro/
 
-# The built globe engine bundle is synced from the TravelApp repo by
-# `npm run sync-globe`, and (like in TravelApp itself) stays untracked because
-# the build bakes API keys into it. A fresh clone must run sync-globe once.
-public/globe/
+# The built globe ENGINE bundle used to be synced here (735 MB) so the hero
+# could run a live globe. It is gone: the hero is now one baked texture on a
+# sphere (`src/scripts/hero-globe.js` + `public/hero/globe.webp`), and that
+# texture IS committed — it carries no secret and it is 0.17 MB, so a fresh
+# clone renders its own hero with no sync step. Refresh it after a palette
+# change with `npm run sync-hero`.

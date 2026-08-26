@@ -439,7 +439,6 @@ const description =
 
 <header class="hero" id="heroSection">
   <div id="globeEmbed"></div>
-  <div class="globe-boot" id="globeBoot">LOADING THE WORLD…</div>
   <div class="hero-wash"></div>
   <div class="hero-card">
     <p class="eyebrow">A new way to plan travel</p>
@@ -453,13 +452,7 @@ const description =
     </div>
     <p class="hero-note">Runs in your browser · nothing to install</p>
   </div>
-  <span class="globe-caption">Live — drag to spin</span>
   <div class="hero-dock">
-    <div class="dock-toggle">
-      <button class="mode-chip on" type="button" data-mode="clay">Cartoon</button>
-      <button class="mode-chip" type="button" data-mode="stylized">Map</button>
-    </div>
-    <span class="dock-divider"></span>
     <div class="dock-links quiet">
       <a href="#modes">Globe modes</a>
       <a href="#plan">Planning</a>
@@ -631,54 +624,30 @@ const description =
   </div>
 </footer>
 
-<script is:inline type="module">
-  // The BUILT engine bundle, synced into public/globe by `npm run sync-globe`.
-  import { mount } from '/globe/globe-host.js';
+<script>
+  // ⚠ THE HERO NO LONGER MOUNTS THE ENGINE. It used to import the built cartoon
+  // bundle from /globe and drive it with setMode/flyTo/setAutoRotate — 735 MB of
+  // tiles and datasets in public/, and a "LOADING THE WORLD…" placard over a
+  // ~6.4 s boot, to render a planet the page deliberately let nobody zoom.
+  //
+  // It is now one baked texture (0.17 MB) on a sphere. Regenerate the texture
+  // from the TravelApp repo whenever the look changes:
+  //   cd ../TravelApp/globe_src
+  //   node scripts/bake-hero-globe.mjs --out ../../tail-feathers-site/public/hero
+  //   node scripts/png-to-webp.mjs ../../tail-feathers-site/public/hero/hero-globe.2048.png
+  //
+  // ⚠ THIS TAG CARRIES NO ATTRIBUTES, AND THAT IS LOAD-BEARING. Astro only
+  // bundles a `<script>` that has none of its own — `is:inline` opts out, and so
+  // does a bare `type="module"`. With either one present Astro emits the source
+  // VERBATIM, the browser resolves `../scripts/hero-globe.js` against the page
+  // URL, 404s, and the module never runs: no error on screen, no canvas, just a
+  // hero with an empty right half. Measured here, exactly that way.
+  // Astro's own output is a module, so nothing is lost by omitting the type.
+  import { mountHeroGlobe } from '../scripts/hero-globe.js';
 
-  const boot = document.getElementById('globeBoot');
-  const chips = [...document.querySelectorAll('.mode-chip')];
-
-  // Transport must be registered before mount so the ready event has somewhere
-  // to land. Boot into the free stylized basemap, then switch to the cartoon
-  // surface (mode id 'clay') once the engine reports ready — sending it earlier
-  // would race init.
-  window.__globeOnEvent = (raw) => {
-    const event = JSON.parse(raw);
-    if (event.type === 'ready') {
-      window.Globe.receive({ type: 'setMode', payload: { modeId: 'clay' } });
-      // Pull the camera in over the Atlantic so the planet fills the frame
-      // instead of floating as a marble in the middle of it.
-      window.Globe.receive({
-        type: 'flyTo',
-        payload: { latitude: 24, longitude: -18, altitude: 8500000, pitch: -90 },
-      });
-      // A slow idle spin — one rotation in four minutes. The engine skips it
-      // while the flight above is running and stops it for good on the first
-      // drag, so this can be sent immediately.
-      //
-      // Gated on reduced motion: a permanently rotating planet is motion, and
-      // the design spec (§8) makes honouring that setting mandatory.
-      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        window.Globe.receive({
-          type: 'setAutoRotate',
-          payload: { degreesPerSecond: 1.5 },
-        });
-      }
-      boot.style.opacity = '0';
-    }
-    if (event.type === 'modeChanged') {
-      for (const chip of chips) {
-        chip.classList.toggle('on', chip.dataset.mode === event.payload.modeId);
-      }
-    }
-    if (event.type === 'error') console.error('[globe]', event.payload.message);
-  };
-
-  // backdrop: false — the engine's CSS sky (pastel mesh + aurora) stays off, so
-  // the transparent canvas floats the planet directly on the page's butter
-  // field. The hero wash doubles as the legibility scrim where copy crosses
-  // the sphere.
-  mount(document.getElementById('globeEmbed'), { backdrop: false });
+  mountHeroGlobe(document.getElementById('globeEmbed'), {
+    texture: '/hero/globe.webp',
+  });
 
   // The header floats transparent over the hero; past the hero's foot it needs
   // a surface of its own to stay readable over the page content.
@@ -686,21 +655,6 @@ const description =
   addEventListener('scroll', () => {
     navBar.classList.toggle('scrolled', scrollY > 40);
   }, { passive: true });
-
-  // Full-bleed hero: the wheel belongs to the page, not the globe. Capturing on
-  // the hero ancestor stops the event before any engine listener sees it, while
-  // the default (page scroll) still happens. Dragging still spins the globe.
-  document.getElementById('heroSection').addEventListener(
-    'wheel',
-    (event) => event.stopPropagation(),
-    { capture: true },
-  );
-
-  for (const chip of chips) {
-    chip.addEventListener('click', () => {
-      window.Globe.receive({ type: 'setMode', payload: { modeId: chip.dataset.mode } });
-    });
-  }
 
   // ---------- the timeline editor demo ----------
   // The two signature interactions, real on the page: drag a stay's edge to

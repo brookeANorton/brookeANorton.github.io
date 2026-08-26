@@ -10,41 +10,55 @@ is invisible to crawlers.
 
 ```
 npm install
-npm run sync-globe   # copies the built globe engine from ../TravelApp
 npm run dev          # http://localhost:4321
 ```
 
-`sync-globe` expects a sibling checkout of TravelApp with a built globe. Build
-it with the **public** target, not the default one:
-
-```
-cd ../TravelApp/globe_src && npm run build:public
-```
-
-`npm run build` (no suffix) is TravelApp's dev build: it points clay terrain
-tiles at `localhost:8443` and only fail-softs to public origins, so a site
-built from it would send every visitor's browser knocking on their own
-machine first. `build:public` is the shippable one. Rebuild TravelApp's dev
-bundle afterwards if you work on the app (`npm run build`) — the two targets
-share one output directory.
-
-The bundle lands in `public/globe/` and stays untracked — the globe build bakes
-API keys into the bundle, so it is never committed (same policy as TravelApp
-itself). `sync-globe` prints the bundle's build stamp: if it is older than the
-last engine change you made, the hero is showing a stale planet.
+There is no sync step. The hero texture is committed, so a fresh clone renders
+its own globe.
 
 ## The hero globe
 
-The landing hero mounts the real globe engine (`/globe/globe-host.js`) with
-`backdrop: false` — so the planet floats on the page's own butter field rather
-than the engine's pastel sky — switches it to the cartoon terrain mode, and
-sets a 1.5 deg/s idle spin (`setAutoRotate`, suppressed under
-`prefers-reduced-motion`, and stopped for good by the engine the moment a
-visitor drags the globe). That mode streams free, keyless data
-(OpenFreeMap vectors, Terrarium elevation) — no Google billing from this site.
-The baked key in the bundle is only exercised by satellite/photoreal modes,
-which this site never enables; a keyless engine build for the site is a nice
-later hardening.
+The hero is a **baked texture on a sphere**, drawn by `src/scripts/hero-globe.js`
+in ~250 lines of plain WebGL: a UV sphere, one equirectangular map, one fixed
+light, and a 1.5 deg/s spin that stops under `prefers-reduced-motion` and pauses
+when the hero scrolls out of view. No engine, no tiles, no input — the planet
+turns and that is all it does.
+
+### What this replaced, and why
+
+The hero used to mount TravelApp's real cartoon engine: 735 MB of tiles and
+datasets in `public/globe/`, a "LOADING THE WORLD…" placard over a ~6.4 s boot,
+and a live OpenFreeMap/Terrarium tile stream on every page view — to render a
+globe the page deliberately let nobody zoom. The whole site is now **1 MB**, and
+the planet is on screen in the first frame.
+
+Two things genuinely went away with it, both listed here rather than quietly
+dropped:
+
+* **The hero mode chips** (`Cartoon` / `Map`) switched the live engine between
+  globe modes. A baked hero cannot switch modes, and only one cartoon look
+  (`sage`) ships, so there was no second texture to bake that would honestly
+  represent the product. The `#modes` section below the fold still tells the
+  four-globes story with its own static swatches.
+* **Drag to spin**, and the `Live — drag to spin` caption that advertised it.
+
+### Rebaking the texture
+
+The texture is painted with the app's own palette — `bake-hero-globe.mjs`
+imports `buildAridityPaletteTable` and `lookById` from the engine source rather
+than restating any hex — so the hero cannot drift from the product. Re-run it
+after any change to `look.js`'s `classColors` / `classAridity`:
+
+```
+cd ../TravelApp/globe_src
+node scripts/bake-hero-globe.mjs                        # -> build/hero-globe.2048.png
+node scripts/png-to-webp.mjs build/hero-globe.2048.png  # -> 0.17 MB
+cd ../../tail-feathers-site && npm run sync-hero
+```
+
+`--size 4096` bakes a sharper texture (~0.84 MB) if the hero ever fills a large
+desktop viewport and looks soft. Keep both dimensions powers of two: WebGL1
+silently refuses to mipmap a non-POT texture, and the globe's limb shimmers.
 
 ## Before production
 

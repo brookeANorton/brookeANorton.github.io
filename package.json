@@ -8,7 +8,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "sync-globe": "node scripts/sync-globe.mjs"
+    "sync-hero": "node scripts/sync-hero-globe.mjs"
   },
   "dependencies": {
     "astro": "^5.0.0"
