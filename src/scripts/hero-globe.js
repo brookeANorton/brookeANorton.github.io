@@ -29,6 +29,21 @@ const DEGREES_PER_SECOND = 1.5;
 /// a ball at anything near it, and upright reads as a diagram.
 const AXIAL_TILT_DEG = 23.4;
 
+/// Longitude facing the viewer on the first frame.
+///
+/// At spin 0 the sphere presents the antimeridian, which is open Pacific — a
+/// hero that opens on an empty blue disc and only finds land once it has turned
+/// for a minute. 25°E puts Africa and Europe on the face, with Asia arriving as
+/// it spins. The copy sits over the globe's left edge, so the land wants to be
+/// centre-right rather than centred.
+const INITIAL_LONGITUDE_DEG = 25;
+
+/// The spin angle that brings [INITIAL_LONGITUDE_DEG] to face the camera.
+///
+/// A point at texture longitude L sits at phi = (L + 180)/360 · 2π, and the spin
+/// rotates it to face the viewer when phi + spin = 0.
+const INITIAL_SPIN = -((INITIAL_LONGITUDE_DEG + 180) / 180) * Math.PI;
+
 /// Mesh resolution. 96x48 is 4,656 vertices — the silhouette is round to well
 /// under a pixel at any hero size, and the cost is irrelevant next to one
 /// full-screen fragment pass.
@@ -62,31 +77,60 @@ const SPHERE_FILL = 0.58;
 /// viewport. Setting that equal to SPHERE_FILL and solving for d gives:
 const CAMERA_DISTANCE = 1 / (SPHERE_FILL * Math.tan(FOV_Y / 2));
 
+/// The cloud shell's radius, as a multiple of the globe's.
+///
+/// The engine floats its clouds 80 km up (`CLOUD_SHELL_ALTITUDE_M` in
+/// `cartoon/clouds.js`) against an equatorial radius of 6,371 km. Matching the
+/// ratio rather than picking a pleasing offset is what keeps the shell reading
+/// as weather sitting above the ground: too low and the clouds look painted on,
+/// too high and they detach into a visible ring around the limb.
+const CLOUD_RADIUS = 1 + 80_000 / 6_371_000;
+
 const VERT = `
 attribute vec3 aPos;
 attribute vec2 aUv;
 uniform mat4 uProj;
 uniform mat4 uView;
 uniform mat4 uModel;
+uniform float uScale;
 varying vec2 vUv;
 varying vec3 vNormal;
 void main() {
   vUv = aUv;
   // The sphere is a unit sphere at the origin, so the position IS the normal.
   // uModel carries only rotation, so it may be applied to the normal directly.
+  // uScale lifts the cloud shell and does not affect the normal.
   vNormal = normalize((uModel * vec4(aPos, 0.0)).xyz);
-  gl_Position = uProj * uView * uModel * vec4(aPos, 1.0);
+  gl_Position = uProj * uView * uModel * vec4(aPos * uScale, 1.0);
 }`;
 
 const FRAG = `
 precision highp float;
 uniform sampler2D uMap;
 uniform vec3 uLight;
+uniform float uCloudMode;
 varying vec2 vUv;
 varying vec3 vNormal;
 void main() {
   vec3 albedo = texture2D(uMap, vUv).rgb;
   vec3 n = normalize(vNormal);
+
+  if (uCloudMode > 0.5) {
+    // The bake stores the cloud mask in all three channels; one is enough.
+    float a = albedo.r;
+    // The engine draws its shell with MeshBasicMaterial — unlit, flat white. A
+    // literal port would leave the night side glowing over a shaded globe, so
+    // the clouds take a SLIVER of the same light instead: enough to sit on the
+    // terminator, not enough to turn grey in daylight.
+    float cloudLight = 0.86 + 0.14 * max(dot(n, normalize(uLight)), 0.0);
+    // ⚠ SOFTENED, AND THE REASON IS THE ZOOM, NOT TASTE. The engine's shell is
+    // authored for the app's globe view (~14,000 km, whole planet in frame);
+    // this hero crops in about 1.4x on top of that, so the same texels cover
+    // proportionally more screen and the same clouds read much heavier. Land is
+    // what the hero is selling, so the shell gives way to it.
+    gl_FragColor = vec4(vec3(cloudLight), a * 0.72);
+    return;
+  }
 
   // ⚠ THE LIGHT IS FIXED IN WORLD SPACE, NOT ATTACHED TO THE MODEL. uModel spins
   // the planet and the normal with it; uLight does not move. Bake a sun into the
@@ -145,10 +189,19 @@ function buildSphere(lonBands, latBands) {
     const cosT = Math.cos(theta);
     for (let lon = 0; lon <= lonBands; lon++) {
       const phi = (lon / lonBands) * 2 * Math.PI;
-      // +X at lon 180E, +Z toward the viewer at lon 90E — any consistent frame
-      // works because the texture's u is taken from the band index, never from
-      // an inverse trig function of the position.
-      positions.push(sinT * Math.cos(phi), cosT, sinT * Math.sin(phi));
+      // ⚠ sin FOR X AND cos FOR Z, NOT THE OTHER WAY ROUND, AND IT IS NOT
+      // ARBITRARY. Swapping them mirrors the parameterisation, which flips the
+      // triangle winding: every outward-facing triangle becomes a BACK face,
+      // `cullFace(BACK)` throws away the near hemisphere, and what reaches the
+      // screen is the inside of the FAR wall.
+      //
+      // That renders a globe that looks entirely correct — the mirrored
+      // parameterisation and the mirror of viewing a far wall from outside
+      // cancel exactly — so the defect is invisible on a lone sphere. It shows
+      // up the moment a second shell is added: the clouds landed BEHIND the
+      // planet and were depth-rejected everywhere except the sliver overhanging
+      // the limb, which reads as "the cloud texture is not loading".
+      positions.push(sinT * Math.sin(phi), cosT, sinT * Math.cos(phi));
       uvs.push(lon / lonBands, lat / latBands);
     }
   }
@@ -205,9 +258,9 @@ function spinWithTilt(spinRad, tiltRad) {
 /// Mounts the hero globe. Returns a disposer.
 ///
 /// @param {HTMLElement} host
-/// @param {{texture: string, degreesPerSecond?: number}} options
+/// @param {{texture: string, clouds?: string, degreesPerSecond?: number}} options
 export function mountHeroGlobe(host, options) {
-  const { texture, degreesPerSecond = DEGREES_PER_SECOND } = options;
+  const { texture, clouds = null, degreesPerSecond = DEGREES_PER_SECOND } = options;
   if (!host) throw new Error('hero-globe: no host element');
 
   const canvas = document.createElement('canvas');
@@ -263,33 +316,49 @@ export function mountHeroGlobe(host, options) {
   const uView = gl.getUniformLocation(program, 'uView');
   const uModel = gl.getUniformLocation(program, 'uModel');
   const uLight = gl.getUniformLocation(program, 'uLight');
+  const uScale = gl.getUniformLocation(program, 'uScale');
+  const uCloudMode = gl.getUniformLocation(program, 'uCloudMode');
 
-  // A one-texel placeholder in the ocean colour, so the first frames are a
-  // planet-coloured sphere rather than a black one while the texture decodes.
-  const tex = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, tex);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
-    new Uint8Array([13, 65, 89, 255]));
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  /// Creates a texture holding one placeholder texel, then swaps in the real
+  /// image when it arrives. The placeholder matters: without it the first frames
+  /// sample an undefined texture, which is black on most drivers, and the hero
+  /// flashes a dark ball before the planet appears.
+  function loadTexture(url, placeholder, onReady) {
+    const handle = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, handle);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, placeholder);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    if (!url) return handle;
 
-  const image = new Image();
-  image.decoding = 'async';
-  image.onload = () => {
-    gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
-    // The bake is power-of-two (2048x1024), which is what lets WebGL1 mipmap it
-    // at all. A non-POT texture here would silently fall back to no mips and
-    // alias badly at the limb, where the texture is most minified.
-    gl.generateMipmap(gl.TEXTURE_2D);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    const image = new Image();
+    image.decoding = 'async';
+    image.onload = () => {
+      gl.bindTexture(gl.TEXTURE_2D, handle);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+      // Both bakes are power-of-two (2048x1024 and 1024x512), which is what lets
+      // WebGL1 mipmap them at all. A non-POT texture silently falls back to no
+      // mips and aliases badly at the limb, where it is most minified.
+      gl.generateMipmap(gl.TEXTURE_2D);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+      onReady?.();
+    };
+    image.onerror = () => { host.dataset.globe = 'texture-failed'; };
+    image.src = url;
+    return handle;
+  }
+
+  const tex = loadTexture(texture, new Uint8Array([13, 65, 89, 255]), () => {
     host.dataset.globe = 'ready';
-  };
-  image.onerror = () => { host.dataset.globe = 'texture-failed'; };
-  image.src = texture;
+  });
+  // Placeholder is fully transparent, so a missing or slow cloud texture is a
+  // clear sky rather than a white shell over the planet.
+  const cloudTex = loadTexture(clouds, new Uint8Array([0, 0, 0, 0]), () => {
+    host.dataset.clouds = 'ready';
+  });
 
   gl.enable(gl.DEPTH_TEST);
   gl.enable(gl.CULL_FACE);
@@ -320,7 +389,7 @@ export function mountHeroGlobe(host, options) {
   const tilt = (AXIAL_TILT_DEG * Math.PI) / 180;
 
   let raf = 0;
-  let spin = 0;
+  let spin = INITIAL_SPIN;
   let last = 0;
   let visible = true;
   let disposed = false;
@@ -338,6 +407,31 @@ export function mountHeroGlobe(host, options) {
     }
     gl.uniformMatrix4fv(uModel, false, spinWithTilt(spin, tilt));
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    // --- the planet ---
+    gl.enable(gl.DEPTH_TEST);
+    gl.disable(gl.BLEND);
+    gl.depthMask(true);
+    gl.uniform1f(uScale, 1);
+    gl.uniform1f(uCloudMode, 0);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.drawElements(gl.TRIANGLES, mesh.indices.length, gl.UNSIGNED_SHORT, 0);
+
+    // --- the cloud shell, 80 km up ---
+    // Back-face culling does the hiding here, exactly as the engine's FrontSide
+    // material does: only the near hemisphere of the shell is drawn, so the far
+    // side never shows through the planet and no sorting is needed.
+    //
+    // Depth WRITES are off. The shell is the last thing drawn, so writing would
+    // change nothing this frame — but leaving it on means any later pass has to
+    // know about a depth surface floating above the globe, which is the kind of
+    // thing that is discovered by a bug rather than by reading.
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthMask(false);
+    gl.uniform1f(uScale, CLOUD_RADIUS);
+    gl.uniform1f(uCloudMode, 1);
+    gl.bindTexture(gl.TEXTURE_2D, cloudTex);
     gl.drawElements(gl.TRIANGLES, mesh.indices.length, gl.UNSIGNED_SHORT, 0);
   }
 
