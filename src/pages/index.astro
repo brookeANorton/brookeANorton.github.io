@@ -266,7 +266,19 @@ const description =
   .mode-card h3 { font-size: 20px; line-height: 1.25; font-weight: 500; letter-spacing: -0.01em; }
   .mode-card p { font-size: 13px; line-height: 1.5; opacity: 0.85; }
   .sw-cartoon { background: linear-gradient(120deg, #A8D8BC 0% 34%, #C9E6D8 34% 55%, #B9CDF5 55% 100%); }
-  .sw-clay { background: linear-gradient(120deg, #E8CBA8 0% 40%, #D6E4C9 40% 62%, #C4D5EE 62% 100%); }
+  /* ⚠ THE REAL CLAY SURFACE, NOT AN IMPRESSION OF IT. The other three swatches
+     are three-stop gradients standing in for a look; this one is a crop of the
+     actual baked planet — the same `classColors` the app paints mode `clay`
+     with, so the card cannot advertise a colour the product does not have.
+
+     It costs NOTHING to serve: the hero above already loaded this exact URL, so
+     this is a cache hit, not a second image. Sized to the bake's native 2048px
+     width so the crop is texel-for-texel sharp rather than upscaled, and offset
+     onto the western Mediterranean — sand, maquis, farmland and sea inside one
+     64px band, which is the widest colour range the palette has anywhere. */
+  .sw-clay {
+    background: url('/hero/globe.webp') -964px -253px / 2048px auto no-repeat, #C4D5EE;
+  }
   .sw-satellite { background: linear-gradient(120deg, #55684A 0% 30%, #7A8A5E 30% 52%, #33406B 52% 100%); }
   .sw-photoreal { background: linear-gradient(120deg, #98A6BC 0% 30%, #C3CDDD 30% 58%, #5D6E8C 58% 100%); }
 
