@@ -94,15 +94,31 @@ void main() {
   // the sun orbiting the Earth once every four minutes.
   float diffuse = max(dot(n, normalize(uLight)), 0.0);
 
-  // A wide terminator. A hard one looks like a rendering of a planet; this look
-  // is a painted globe, and the palette was authored to be read, not shaded off.
-  float light = 0.62 + 0.38 * smoothstep(-0.35, 0.85, diffuse);
+  // A wide, shallow terminator. A hard one looks like a photograph of a planet;
+  // this look is a PAINTED globe, and the palette was authored to be read, not
+  // shaded off. The relief and canopy are baked into the texture, so this pass
+  // only has to keep the sphere from reading flat — it does not have to do the
+  // modelling as well.
+  float light = 0.74 + 0.26 * smoothstep(-0.25, 0.90, diffuse);
 
-  // Rim: the atmosphere read, and the thing that separates the dark limb from a
-  // dark page. Keyed off the view direction, which is -Z in view space; the
-  // model matrix is rotation-only so the world-space normal is comparable.
+  // Toward the palette, not away from it. Baking averages colour in linear light
+  // across sixteen source texels per output texel, which is correct and also
+  // desaturating; this puts back roughly what the averaging took out, so the
+  // sphere matches the reference render rather than the flat texture.
+  vec3 lit = albedo * light;
+  float luma = dot(lit, vec3(0.2126, 0.7152, 0.0722));
+  lit = mix(vec3(luma), lit, 1.12);
+
+  // Rim: the atmosphere read, and what separates the dark limb from the page.
+  // Keyed off the view direction, which is -Z in view space; the model matrix is
+  // rotation-only, so the world-space normal is comparable.
   float rim = pow(1.0 - max(n.z, 0.0), 3.0);
-  vec3 color = albedo * light + vec3(0.34, 0.53, 0.62) * rim * 0.55;
+  // A second, wider and much fainter term. One sharp rim reads as a lit edge; a
+  // sharp one over a broad one reads as air.
+  float halo = pow(1.0 - max(n.z, 0.0), 1.6);
+  vec3 color = lit
+    + vec3(0.34, 0.53, 0.62) * rim * 0.55
+    + vec3(0.30, 0.48, 0.58) * halo * 0.16;
 
   gl_FragColor = vec4(color, 1.0);
 }`;
