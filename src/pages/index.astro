@@ -217,22 +217,42 @@ const lenses = [
     height: 94vh; min-height: 640px;
     background: var(--tf-butter);
   }
+  /* ⚠ WIDTH DOES NOT SIZE THE PLANET — `SPHERE_FILL` in hero-globe.js does.
+     The projection is a vertical-FOV perspective, so the sphere's diameter is
+     `SPHERE_FILL × this element's HEIGHT`. Width only decides how much room the
+     disc has before it clips at the sides, and `left/transform` decide where it
+     sits. At 0.74 × 164% the planet is ~1.2× the hero's height: it crops off the
+     top and bottom while the limb still closes left and right, which is what
+     makes it read as a globe rather than as a curved texture. */
+  /* The planet is centred and rises from the bottom, so the copy sits above it
+     on clean butter rather than on top of dark ocean.
+     ⚠ THE PLANET'S SIZE IS `SPHERE_FILL` IN hero-globe.js, NOT ANYTHING HERE.
+     The projection is a vertical-FOV perspective, so the sphere's diameter is
+     `SPHERE_FILL × this element's HEIGHT`; width only decides how much room the
+     disc has before it clips at the sides. At 0.74 × 168% the sphere is ~1.24×
+     the hero's height — bigger than the whole hero — and `top: 31%` drops its
+     centre below the fold so what shows is the upper third of a very large
+     planet. Move `top` and `height` together or the framing shifts twice. */
   #globeEmbed {
-    position: absolute; top: -32%; height: 164%;
-    left: 10%; width: 140%;
+    position: absolute; top: 40%; height: 168%;
+    left: 50%; transform: translateX(-50%); width: 150%;
   }
-  /* Desktop: NO veil over the planet — the field is already butter, and copy
-     that crosses the limb is carried by its own text halo instead. The wash
-     only returns on small screens, where the copy sits fully on the sphere. */
+  /* Desktop needs NO veil: the copy no longer crosses the planet at all. The
+     wash returns only on narrow screens, where there is not enough height to
+     keep them apart. */
   .hero-wash { display: none; }
   /* The block ignores the pointer so the globe stays draggable through it;
      only the buttons and links catch input. */
   .hero-card {
-    position: absolute; z-index: 3; top: 50%; transform: translateY(-52%);
-    left: clamp(24px, 6vw, 110px);
-    max-width: 620px;
+    position: absolute; z-index: 3;
+    top: clamp(88px, 11vh, 128px);
+    left: 50%; transform: translateX(-50%);
+    width: calc(100% - 48px); max-width: 640px;
+    text-align: center;
     pointer-events: none;
   }
+  .hero-card .lede { margin: 0 auto; }
+  .hero-card .hero-cta { justify-content: center; }
   .hero-card a, .hero-card .btn { pointer-events: auto; }
   .hero-card .eyebrow { color: var(--tf-ink); opacity: 0.75; }
   /* A butter halo hugging the letterforms: invisible butter-on-butter, and it
@@ -358,7 +378,7 @@ const lenses = [
     to { opacity: 1; transform: translateY(-52%); }
   }
   @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-  .hero-card { animation: panel-in-centered-y var(--panel) var(--ease) backwards; }
+  .hero-card { animation: panel-in-centered-x var(--panel) var(--ease) backwards; }
   /* Scroll reveals: tagged from JS so the document is whole without it. */
   .reveal { opacity: 0; }
   .reveal.in { animation: panel-in var(--panel) var(--ease) var(--reveal-delay, 0s) both; }
@@ -372,16 +392,32 @@ const lenses = [
     .trust-grid { grid-template-columns: 1fr; }
     .nav-links a:not(.nav-cta) { display: none; }
     .hero { min-height: 560px; }
-    #globeEmbed { top: -20%; height: 140%; left: -30%; width: 160%; }
+    /* Narrow screens keep the same stack, but the planet has to SHRINK, not
+       grow. Sphere diameter is `SPHERE_FILL × height`, and at the desktop 168%
+       that comes out wider than a phone's viewport — the disc clips at both
+       sides, the limb never closes, and it reads as a texture rather than a
+       globe. 62% puts the diameter at roughly 0.46× the hero height, which
+       leaves the limb visible inside 390px with room to spare. */
+    #globeEmbed { top: 56%; height: 62%; left: 50%; width: 130%; }
+    /* ⚠ `display: block` IS LOAD-BEARING — the base rule hides this element on
+       desktop, so setting only the gradient here leaves the veil switched off
+       and the copy sits unreadable on the planet. Measured exactly that way. */
     .hero-wash {
       display: block;
       position: absolute; inset: 0; z-index: 2; pointer-events: none;
+      /* Full strength while it is over butter (where it is invisible), then a
+         long smooth ramp so it never lays a visible band across the planet's
+         upper limb. It only has real work to do on a short viewport, where the
+         copy and the globe are forced to overlap. */
       background: linear-gradient(180deg,
-        rgba(255, 224, 138, 0.9) 0%,
-        rgba(255, 224, 138, 0.58) 45%,
-        rgba(255, 224, 138, 0.0) 78%);
+        rgba(255, 224, 138, 0.96) 0%,
+        rgba(255, 224, 138, 0.94) 46%,
+        rgba(255, 224, 138, 0.74) 58%,
+        rgba(255, 224, 138, 0.40) 68%,
+        rgba(255, 224, 138, 0.14) 78%,
+        rgba(255, 224, 138, 0.0) 88%);
     }
-    .hero-card { top: 84px; transform: none; left: 24px; right: 24px; max-width: none; animation-name: panel-in; }
+    .hero-card { top: 80px; }
   }
   /* §8: under prefers-reduced-motion all movement becomes an opacity
      cross-fade at 120ms. */

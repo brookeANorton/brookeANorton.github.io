@@ -59,16 +59,21 @@ const MAX_DPR = 2;
 const FOV_Y = Math.PI / 5;
 
 /// The sphere's diameter as a fraction of its CONTAINER's height — not the
-/// viewport's. `#globeEmbed` is deliberately oversized (164% tall, offset up and
-/// right) so the planet crops off the top and bottom of the hero, so the two
-/// numbers are far apart: 0.58 here is a globe about as tall as the hero itself.
+/// viewport's. `#globeEmbed` is oversized (see `#globeEmbed` in index.astro), so
+/// the two numbers are far apart.
 ///
-/// ⚠ THIS REPLACES A HARD-CODED CAMERA DISTANCE, WHICH IS WHY IT EXISTS. At a
-/// fixed distance the sphere's on-screen size is whatever the container happens
-/// to be, so a CSS tweak to `#globeEmbed` silently re-frames the planet — and
-/// the first build of this hero came out cropped so tight the limb never closed
-/// and it read as a texture, not a globe.
-const SPHERE_FILL = 0.58;
+/// ⚠ THIS IS THE KNOB FOR "MAKE THE GLOBE BIGGER", NOT THE CSS. The projection
+/// is a vertical-FOV perspective, so the sphere's on-screen size depends ONLY on
+/// the container's HEIGHT — widening `#globeEmbed` moves the planet sideways and
+/// changes nothing about its size. This constant exists because it replaced a
+/// hard-coded camera distance, under which a CSS tweak silently re-framed the
+/// planet: the first build of this hero came out cropped so tight the limb never
+/// closed and it read as a texture rather than a globe.
+///
+/// Raised 0.58 → 0.74 when the hero was re-centred: the planet is now the middle
+/// of the composition rather than a bleed off the right edge, and at 0.58 a
+/// centred sphere left too much empty butter around it to read as the subject.
+const SPHERE_FILL = 0.74;
 
 /// Distance from the sphere's centre that makes [SPHERE_FILL] true.
 ///
