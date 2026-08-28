@@ -30,8 +30,8 @@ const contactEmail = null;  // no published inbox — yet
 ```
 
 `appUrl` is the important one. While it is `null` every call to action reads
-**"See it working"** and scrolls to the screenshots; set it to a real URL and
-every one of them becomes **"Open the globe"** pointing there, and the closing
+**"See it working"** and scrolls to the timeline screenshot; set it to a real URL
+and every one of them becomes **"Open the globe"** pointing there, and the closing
 panel changes from *"Not open to the public yet"* to an invitation. Nothing else
 needs editing. Setting `contactEmail` turns the closing button into a mailto
 waitlist instead.
@@ -82,6 +82,12 @@ flutter build web --output=build/web-verify \
 cd globe_src
 for s in world region islands roads timeline; do
   node scripts/shot-marketing.mjs --steps globe_src/scripts/shot-scenes/$s.json
+done
+# ⚠ world.webp keeps its NATIVE 2880 width; everything else goes to 1800.
+# The descent scales world.webp to ~2.25x (see "The descent" above), so a
+# 1800px encode of it ships visibly soft while the others never leave 1:1.
+node scripts/png-to-webp.mjs ../build/marketing-shots/world.png --quality 0.82
+for s in region islands roads timeline; do
   node scripts/png-to-webp.mjs ../build/marketing-shots/$s.png --width 1800 --quality 0.82
 done
 cp ../build/marketing-shots/*.webp ../../tail-feathers-site/public/shots/
@@ -103,6 +109,65 @@ Three traps, each already paid for:
   UI does not label, so a screenshot of one asserts something untrue. The trip
   in `shots/timeline.webp` uses car legs only, which are really routed.
 
+## The descent — four globes, one flight
+
+The top of the page is not a hero, it is a **360vh block with a pinned 100vh
+stage**. Four "stops" sit on top of each other and the scroll position
+cross-fades between them while each one grows, so the page reads as a continuous
+flight into the planet:
+
+| Stop | What it is | Why it is there |
+| --- | --- | --- |
+| 0 | the live WebGL globe | the whole planet, painted. It is a baked texture, so it carries **no destination markers** — which is exactly why stop 1 has to exist. |
+| 1 | `shots/world.webp` | the app's world view, whole disc, 29 markers. The markers appearing *is* the transition's payload. |
+| 2 | `shots/region.webp` | the same planet with the limb high in frame, hundreds of markers. |
+| 3 | `shots/islands.webp` | the limb at the top edge, one sea. |
+
+The four compose because they *are* a real zoom ladder — they were captured as
+one flight. `roads.webp` and `timeline.webp` are deliberately **not** in the
+stack: one is flat Map mode with no limb at all and the other is a UI, and
+either one breaks the read. They stay as ordinary sections below.
+
+### Three layouts, and only one of them is the descent
+
+The stacked layout — four ordinary panels, art in a card — is the CSS **base**,
+not a fallback bolted on afterwards. It is what ships for:
+
+* **no JavaScript** (the `driven` class is added by script),
+* **`prefers-reduced-motion: reduce`** — §8 of the spec makes this a promise, and
+  a scroll-driven zoom is motion,
+* **anything under 901px** — a 360vh pinned block on a phone is four screens
+  before the thesis strip, and a 16:10 capture full-bleed in a portrait stage is
+  a vertical slice of terrain with the limb cropped off.
+
+All three are measured, not assumed; `prefers-reduced-motion` and script-disabled
+are both checked with CDP emulation.
+
+### The numbers that are load-bearing
+
+* **`SPHERE_FILL` sizes the planet, not the CSS.** See the block comment on
+  `#globeEmbed`. The visible arc comes out at 138% of the viewport *height*;
+  that number is what decides whether it reads as a globe or as a curved
+  texture, and it has to be re-checked against 1024, 1366, 1440 and 1920 after
+  any change to `top`/`height`.
+* **Stops 2 and 3 scale about their top edge.** The bottom ~7% of every capture
+  is the app's trip dock and attribution strip; full-bleed, that reads as a UI
+  bar sliced off mid-glyph. Scaling from `transform-origin: 50% 0` pushes it out
+  of frame while cropping nothing off the top, where the limb is. The minimum
+  scales in `SCALES` are chosen to clear it — below ~1.075 the dock reappears.
+* **Stop 1 scales to ~2.25×, and that is why `world.webp` is re-encoded from the
+  2880px source.** Its planet is a small disc in a lot of sky; at scale 1 it is
+  roughly a third the width of the live globe, so a plain cross-fade reads as
+  flying *backwards*.
+* **`TAIL = 0.84`.** The stage stops being sticky at progress 1 exactly, so a
+  sequence that finishes there finishes on the frame it starts sliding away, and
+  the fourth globe is never seen framed.
+* **`hero.setPaused()` exists because IntersectionObserver cannot do this job.**
+  The globe's host is pinned inside the stage, so it intersects the viewport for
+  all 360vh — including the three screens where it is invisible behind a
+  screenshot. Without the explicit pause it renders at full cost the whole way
+  down.
+
 ## The hero globe
 
 The hero is a **baked texture on a sphere**, drawn by `src/scripts/hero-globe.js`
@@ -116,8 +181,9 @@ turns and that is all it does.
 The hero used to mount TravelApp's real cartoon engine: 735 MB of tiles and
 datasets in `public/globe/`, a "LOADING THE WORLD…" placard over a ~6.4 s boot,
 and a live OpenFreeMap/Terrarium tile stream on every page view — to render a
-globe the page deliberately let nobody zoom. The whole site is now **1 MB**, and
-the planet is on screen in the first frame.
+globe the page deliberately let nobody zoom. The whole site is now **1.6 MB**
+(of which 1.3 MB is the six screenshots), and the planet is on screen in the
+first frame.
 
 Two things genuinely went away with it, both listed here rather than quietly
 dropped:
