@@ -268,16 +268,22 @@ const lenses = [
      At 0.74 × 210% the sphere is 1.554× the stage height. Its centre sits at
      (31% + 105%) = 136% — well below the fold — so what you see is the upper
      cap of a very large planet, and the visible arc comes out 138% of the
-     viewport HEIGHT wide. Checked against every common desktop shape: 1240px
-     inside 1440, 1487 inside 1920, 1057 inside 1366, 881 inside 1024. The limb
-     closes on all of them. Move `top` and `height` together, then re-measure
-     that arc — it is the thing that decides whether this reads as a globe or as
-     a curved texture.
+     viewport HEIGHT wide: 1240px inside 1440, 1487 inside 1920, 1057 inside
+     1366×768. Move `top` and `height` together, then re-measure that arc — it
+     is the thing that decides whether this reads as a globe or as a curved
+     texture.
+
+     ⚠ THE ARC IS A MULTIPLE OF HEIGHT, SO THE CONSTRAINT IS ASPECT, NOT WIDTH.
+     It fits only while W/H ≥ 1.377. That is every 16:9 and 16:10 screen and no
+     4:3 one — 1024×768 gives a 1058px arc inside 1024 and clips. The two media
+     queries at the foot of this stylesheet are the whole answer: one shrinks
+     the planet for squarish landscape windows, the other hands portrait over to
+     the small-globe treatment entirely.
 
      ⚠ WIDTH IS A COST, NOT A LOOK. The canvas is `width × height × dpr²`
      fragments every frame. 130% is the narrowest that still contains a
-     1.554×H-wide sphere on screens up to 5:6 — anything wider is pixels
-     rasterised for nothing. */
+     1.554×H-wide sphere everywhere the driven layout runs — anything wider is
+     pixels rasterised for nothing. */
   #globeEmbed {
     position: absolute; top: 31%; height: 210%;
     left: 50%; transform: translateX(-50%); width: 130%;
@@ -432,7 +438,11 @@ const lenses = [
   .thesis .eyebrow { opacity: 0.6; margin-bottom: 14px; }
 
   /* ---------- paper sections (§4: elevation = border, no shadow) ---------- */
-  section { padding: 88px 0; }
+  /* ⚠ THE NAV IS FIXED, SO EVERY IN-PAGE ANCHOR LANDS 68px SHORT WITHOUT THIS.
+     It matters more than it used to: with no public app URL the primary call to
+     action is itself an anchor (`#plan`), so anchor-landing is now the main way
+     people move through the page, not an afterthought. */
+  section { padding: 88px 0; scroll-margin-top: 84px; }
   .thesis + section { border-top: 0; }
   section + section { border-top: 1px solid var(--tf-border-warm); }
   section .eyebrow { opacity: 0.75; margin-bottom: 12px; }
@@ -535,6 +545,8 @@ const lenses = [
   .reveal.in { animation: panel-in var(--panel) var(--ease) var(--reveal-delay, 0s) both; }
   .reveal.settled { animation: none; opacity: 1; }
 
+  /* Layout collapse is a WIDTH question — two columns stop working when there
+     is not room for two columns. The globe is not in here; see below. */
   @media (max-width: 900px) {
     .feature-row { grid-template-columns: 1fr; gap: 28px; }
     .feature-row.flip .feature-art { order: 0; }
@@ -543,12 +555,38 @@ const lenses = [
     .nav-links a:not(.nav-cta) { display: none; }
     .stop-hero { min-height: 560px; }
     .stop-shot { padding: 56px 0; }
-    /* Narrow screens keep the same stack, but the planet has to SHRINK, not
-       grow. Sphere diameter is `SPHERE_FILL × height`, and at the desktop 210%
-       that comes out far wider than a phone's viewport — the disc clips at both
-       sides, the limb never closes, and it reads as a texture rather than a
-       globe. 62% puts the diameter at 364px inside a 390px viewport — 13px of
-       margin either side, measured, which is the whole budget. 66% eats it. */
+  }
+
+  /* ⚠ SQUARISH LANDSCAPE WINDOWS GET A SMALLER PLANET, AND THEY ARE NOT RARE —
+     1024×768, 1280×1024, 1600×1200, and a tablet held landscape are all here.
+     The arc is 1.377 × the viewport HEIGHT, so it stops fitting below an aspect
+     of 1.377:1 while the driven layout is still perfectly usable. 172%/38% puts
+     the arc at 1.178 × height instead: 905px inside 1024×768, 1206 inside
+     1366×1024. The upper bound is 29/20 rather than 1.377 so there is a margin
+     either side of the threshold rather than a rule that only just holds. */
+  @media (min-width: 901px) and (min-aspect-ratio: 6/5) and (max-aspect-ratio: 29/20) {
+    #globeEmbed { top: 38%; height: 172%; }
+  }
+
+  /* ⚠ THE GLOBE'S BREAKPOINT IS ASPECT, NOT WIDTH, AND THAT COSTS A REAL BUG IF
+     IT IS WRITTEN AS `max-width: 900px` ALONE. An iPad Pro portrait is 1024×1366
+     CSS px — wider than 900, so a width-only rule leaves it on the desktop
+     planet, whose arc would be 1881px inside a 1024-wide viewport: no limb
+     anywhere, which is the exact failure hero-globe.js's SPHERE_FILL comment was
+     written about. A portrait-rotated monitor is the same shape, worse. Every
+     viewport squarer than 6:5 lands here, phones included.
+
+     The matching JS gate keeps the DRIVEN descent off these viewports for the
+     same reason plus a second one: a 16:10 capture full-bleed in a portrait
+     stage is a vertical slice of terrain with the limb cropped away. It reads
+     `(min-width: 901px) and (min-aspect-ratio: 121/100)` — the same boundary as
+     this rule, nudged just past it because both CSS ratio comparisons are
+     INCLUSIVE and something has to break the tie at exactly 6:5. Change one and
+     you must change the other, or a portrait tablet gets stacked panels with
+     the desktop planet and no wash: copy unreadable on top of the globe. */
+  @media (max-width: 900px), (max-aspect-ratio: 6/5) {
+    /* 62% puts the diameter at 364px inside a 390px viewport — 13px of margin
+       either side, measured, which is the whole budget. 66% eats it. */
     #globeEmbed { top: 56%; height: 62%; left: 50%; width: 130%; }
     /* ⚠ `display: block` IS LOAD-BEARING — the base rule hides this element on
        desktop, so setting only the gradient here leaves the veil switched off
@@ -1014,7 +1052,20 @@ const lenses = [
   // Both queries are read live rather than latched: a reader can turn reduced
   // motion on, or rotate a tablet, while the page is open.
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
-  const wideEnough = matchMedia('(min-width: 901px)');
+  // ⚠ ASPECT, NOT JUST WIDTH — AND IT MUST STAY IN STEP WITH THE STYLESHEET.
+  // An iPad Pro portrait is 1024×1366, so a bare `min-width: 901px` would pin a
+  // 360vh descent on it and then crop half the width off every landscape
+  // capture.
+  //
+  // 121/100, not the stylesheet's 6/5, and the 0.01 is deliberate. CSS
+  // `min-aspect-ratio` and `max-aspect-ratio` are both inclusive, so a viewport
+  // at exactly 6:5 — 1200×1000 — matches the small-globe query AND would match
+  // a 6/5 gate here: a pinned descent that opens on the phone-sized planet and
+  // then cuts to a full-screen one. Sitting just above the boundary puts the tie
+  // on the same side in both files. Measured: at 1.20 the page is stacked with
+  // the small globe, and the 1.20-1.21 band is stacked with the 172% globe,
+  // whose arc still fits.
+  const wideEnough = matchMedia('(min-width: 901px) and (min-aspect-ratio: 121/100)');
 
   function syncMode() {
     const next = wideEnough.matches && !reduceMotion.matches;
