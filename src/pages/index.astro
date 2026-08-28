@@ -27,13 +27,6 @@
 //     They are one line in the trust row, not a feature section.
 // Driving times and road geometry ARE real (Mapbox, live traffic) in a
 // configured build, which is why the drive is the leg the page shows.
-//
-// ⚠ THE DESCENT DUPLICATES ITS CLAIMS INTO STATIC SECTIONS ON PURPOSE. Stops
-// 1-3 are hidden with `visibility` when scrolled past (see the driver at the
-// foot of this file), so a crawler rendering at scroll 0 reads only stop 0.
-// Every fact they carry therefore appears again in `#world` or `#lenses`, which
-// are always visible. Move a claim INTO the descent only, and it leaves the
-// indexable document.
 
 // ⚠ THE ONLY TWO SWITCHES THAT CHANGE WHAT THIS PAGE ASKS FOR.
 // `appUrl` is null because there is no public address where the app runs today
@@ -48,10 +41,10 @@ const contactEmail = null;
 
 const isLive = Boolean(appUrl);
 const ctaLabel = isLive ? 'Open the globe' : 'See it working';
-// ⚠ `#plan`, NOT `#world`, AND THE DESCENT IS WHY. This used to point at the
-// zoom pair, which sat immediately under the hero. The four-globe descent now
-// occupies 3.6 viewports of that space, so `#world` means "scroll past every
-// picture on the page to reach three numbers" — the CTA would skip the exact
+// ⚠ `#plan`, NOT `#world`, AND THE DESCENT IS WHY. This used to point at a zoom
+// pair that sat immediately under the hero. The four-globe descent now occupies
+// four and a half viewports of that space, so `#world` would mean "scroll past
+// every picture on the page to reach three numbers" — the CTA skipping the exact
 // proof it promises. `#plan` is the strongest single capture that is NOT in the
 // descent: a real trip, on the real timeline, full width.
 const ctaHref = isLive ? appUrl : '#plan';
@@ -190,9 +183,9 @@ const lenses = [
     transition: background var(--enter) var(--ease);
   }
   .nav-links a:hover { background: rgba(255, 255, 255, 0.55); }
-  /* Before the bar frosts, the links float over the hero's planet and the link
-     nearest the limb loses its contrast. Same butter halo the hero copy uses;
-     it disappears once `.scrolled` puts a real surface behind them. */
+  /* Before the bar frosts, the links float over the hero's butter field and the
+     one nearest the planet loses its contrast. Same butter halo the hero copy
+     uses; it disappears once `.scrolled` puts a real surface behind them. */
   nav:not(.scrolled) .nav-links a:not(.nav-cta) {
     text-shadow: 0 0 10px rgba(255, 224, 138, 0.95), 0 0 20px rgba(255, 224, 138, 0.85);
   }
@@ -225,90 +218,80 @@ const lenses = [
   .nav-cta:hover { transform: translateY(-1px); }
 
   /* ======================================================================
-     THE DESCENT — four globes, each closer than the last.
+     THE DESCENT — four globes you scroll past, in ordinary document flow.
 
-     Two layouts share this markup, and which one runs is decided in JS:
+     ⚠ THERE IS NO PINNING, NO CROSS-FADE AND NO SCROLL DRIVER, AND THAT IS
+     THE DESIGN RATHER THAN A SIMPLIFICATION. The first build of this section
+     was a `position: sticky` stage whose four layers cross-faded on scroll
+     progress. It was rejected on sight — "it's tabbed" — and the diagnosis is
+     right: two layers swapping inside a frame that does not move is a
+     slideshow, and no easing curve turns a slideshow into a descent. Parallax
+     would be the same trick wearing a different hat. What follows is four
+     objects laid down the page, and the reader's own scroll moves past them.
 
-       STACKED (the base rules below) — four full-width panels, one after
-         another, art in a card. This is the layout for NO JAVASCRIPT, for
-         `prefers-reduced-motion: reduce`, and for anything under 901px wide.
-         All three want the same thing: the four globes, no pinning, no
-         scroll-driven motion. Writing it as the base means the document is
-         already correct before a line of script runs.
+     Stop 0 is the live WebGL globe. Stops 1-3 are real app captures at
+     successive altitudes — they compose because they ARE one flight, shot as
+     one. `roads.webp` (flat Map mode, no limb) and `timeline.webp` (a UI) are
+     deliberately not here; either one breaks the read, so they stay as
+     ordinary sections below.
 
-       DRIVEN (`.descent.driven`) — a 100vh stage pinned with `position:
-         sticky` inside a 340vh block. The four stops stack on top of each
-         other and the scroll position cross-fades between them while each
-         one grows, so the page reads as a continuous flight into the planet.
-
-     ⚠ THE FOUR IMAGES ARE A REAL ZOOM LADDER AND THAT IS WHY THIS WORKS.
-     Stop 0 is the painted globe (no destinations on it — it is a baked
-     texture). Stop 1 is the app's world view, whole disc, 29 markers. Stop 2
-     is the same planet with the limb high in frame. Stop 3 has the limb at
-     the very top edge. They were shot as one flight, so they compose as one.
-     `roads.webp` and `timeline.webp` are NOT in this stack: one is flat Map
-     mode with no limb at all and the other is a UI. Adding them breaks the
-     read, which is why they stay as ordinary sections below.
+     Everything is plain CSS, so this section is identical with JavaScript
+     disabled, under `prefers-reduced-motion`, and to a crawler.
      ====================================================================== */
   .descent { position: relative; background: var(--tf-butter); }
-  .descent-stage { position: relative; }
 
-  /* --- stop 0: the hero. Same composition in both layouts. --- */
+  /* --- stop 0: a COMPLETE sphere, half of it below the first screen ------ */
+  /* ⚠ `top` AND `height` ARE IN vh, NOT PERCENT, AND THAT IS LOAD-BEARING.
+     The requirement is a whole planet whose EQUATOR sits on the fold: one
+     object, complete, with only its top half on the first screen. That fixes
+     the sphere's centre at exactly 100vh from the top of the page — a spec,
+     not a look, and one the harness asserts rather than eyeballs.
+
+     Percent units would measure against `.stop-hero`, so the centre would
+     drift every time the hero's height changed and the spec would quietly
+     stop holding. In vh the arithmetic is visible: the sphere's centre is
+     `top + height/2` = 38 + 62 = 100vh, full stop.
+
+     ⚠ THE PLANET'S SIZE IS `SPHERE_FILL` IN hero-globe.js, NOT ANYTHING HERE.
+     The projection is a vertical-FOV perspective, so the sphere's diameter is
+     `SPHERE_FILL × this element's HEIGHT` = 0.74 × 124vh = 91.8vh. Its top
+     edge lands at 54.1vh (just under the hero copy) and its bottom at 145.9vh,
+     which is what `.stop-hero`'s height has to clear.
+
+     ⚠ THE WIDTH CONSTRAINT GOT TIGHTER WHEN THE SPHERE BECAME COMPLETE. The
+     old cropped-cap hero only had to fit its visible ARC; a whole planet has
+     to fit its whole DIAMETER, so the rule is `0.918 × H ≤ W`, i.e. any
+     viewport at least as wide as it is tall. Portrait is handled at the foot
+     of this stylesheet. `width: 100vh` is the narrowest container that still
+     holds a 91.8vh sphere — and it is a third of the fragments the previous
+     oversized hero rasterised every frame. */
   .stop-hero {
     position: relative; overflow: hidden;
-    height: 94vh; min-height: 640px;
+    height: 154vh;
     background: var(--tf-butter);
   }
-  .stop-hero .stop-art { position: absolute; inset: 0; }
-  /* ⚠ THE PLANET'S SIZE IS `SPHERE_FILL` IN hero-globe.js, NOT ANYTHING HERE.
-     The projection is a vertical-FOV perspective, so the sphere's DIAMETER is
-     `SPHERE_FILL × this element's HEIGHT`; width only decides how much room the
-     disc has before it clips at the sides.
-
-     At 0.74 × 210% the sphere is 1.554× the stage height. Its centre sits at
-     (31% + 105%) = 136% — well below the fold — so what you see is the upper
-     cap of a very large planet, and the visible arc comes out 138% of the
-     viewport HEIGHT wide: 1240px inside 1440, 1487 inside 1920, 1057 inside
-     1366×768. Move `top` and `height` together, then re-measure that arc — it
-     is the thing that decides whether this reads as a globe or as a curved
-     texture.
-
-     ⚠ THE ARC IS A MULTIPLE OF HEIGHT, SO THE CONSTRAINT IS ASPECT, NOT WIDTH.
-     It fits only while W/H ≥ 1.377. That is every 16:9 and 16:10 screen and no
-     4:3 one — 1024×768 gives a 1058px arc inside 1024 and clips. The two media
-     queries at the foot of this stylesheet are the whole answer: one shrinks
-     the planet for squarish landscape windows, the other hands portrait over to
-     the small-globe treatment entirely.
-
-     ⚠ WIDTH IS A COST, NOT A LOOK. The canvas is `width × height × dpr²`
-     fragments every frame. 130% is the narrowest that still contains a
-     1.554×H-wide sphere everywhere the driven layout runs — anything wider is
-     pixels rasterised for nothing. */
   #globeEmbed {
-    position: absolute; top: 31%; height: 210%;
-    left: 50%; transform: translateX(-50%); width: 130%;
+    position: absolute; top: 38vh; height: 124vh;
+    left: 50%; transform: translateX(-50%); width: 100vh;
   }
-  /* Desktop needs NO veil: the copy sits above the planet's arc. The wash
-     returns only on narrow screens, where there is not enough height to keep
-     them apart. */
-  .hero-wash { display: none; }
-  /* The block ignores the pointer so nothing here blocks the page; only the
-     buttons and links catch input. */
   .hero-card {
     position: absolute; z-index: 3;
     top: clamp(88px, 11vh, 128px);
     left: 50%; transform: translateX(-50%);
     width: calc(100% - 48px); max-width: 640px;
     text-align: center;
+    /* The block ignores the pointer; only the buttons and links catch input. */
     pointer-events: none;
   }
   .hero-card .lede { margin: 0 auto; }
   .hero-card .hero-cta { justify-content: center; }
   .hero-card a, .hero-card .btn { pointer-events: auto; }
   .hero-card .eyebrow { color: var(--tf-ink); opacity: 0.75; }
-  /* A butter halo hugging the letterforms: invisible butter-on-butter, and it
-     keeps the words legible where they meet the planet's arc — without a veil
-     overlaying the globe itself. */
+  /* A butter halo hugging the letterforms: invisible butter-on-butter, and the
+     only thing keeping the copy legible where a short viewport pushes it onto
+     the planet's apex. This replaced a full-width butter veil, which the
+     geometry no longer needs — with the sphere's centre at 100vh its top edge
+     clears the copy on every shape but a landscape phone. */
   .hero-card h1, .hero-card .lede, .hero-card .eyebrow, .hero-card .hero-note {
     text-shadow:
       0 1px 0 rgba(255, 224, 138, 0.9),
@@ -326,110 +309,52 @@ const lenses = [
   .hero-cta { display: flex; gap: 12px; margin-top: 26px; align-items: center; flex-wrap: wrap; }
   .hero-note { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.65; margin-top: 18px; }
 
-  /* --- stops 1-3, STACKED: ordinary paper panels with the shot in a card --- */
-  .stop-shot { background: var(--tf-paper); padding: 72px 0; border-top: 1px solid var(--tf-border-warm); }
-  .stop-shot .stop-caption { max-width: 34em; margin-bottom: 26px; }
-  .stop-shot .stop-caption h2 { margin-bottom: 10px; }
-  .stop-shot .stop-caption .eyebrow { opacity: 0.75; margin-bottom: 12px; }
-  .stop-shot .stop-caption p { opacity: 0.88; font-size: 16px; }
-  .stop-shot .stop-art img {
-    width: 100%; border-radius: 16px; border: 1px solid var(--tf-border-warm);
+  /* --- stops 1-3: one screen each, full bleed ------------------------- */
+  .stop-shot { position: relative; height: 100vh; overflow: hidden; background: var(--tf-butter); }
+  .stop-shot .stop-art { position: absolute; inset: 0; }
+  .stop-shot .stop-art img { width: 100%; height: 100%; object-fit: cover; }
+
+  /* ⚠ THE SCALES ARE FRAMING, NOT MOTION — THEY ARE STATIC AND EACH ONE PAYS
+     FOR ITSELF.
+
+     Stops 2 and 3 scale about their TOP edge. These are screenshots of a
+     running app, so the bottom ~7% of each frame is the trip dock and the
+     attribution strip; full-bleed, that reads as a UI bar sliced off
+     mid-glyph. 1.10 crops 10% off the foot, which clears it, and cropping
+     from the top instead would eat the planet's limb — the whole reason these
+     read as globes rather than as maps. `object-position: 50% 0` makes the
+     cover crop take from the bottom too, for the same reason. */
+  .stop-shot .stop-art img { transform: scale(1.10); transform-origin: 50% 0; object-position: 50% 0; }
+  /* Stop 1 is the exception in both directions. world.webp is a small disc in
+     a lot of empty sky — about a third the width of the sphere above it — so
+     at scale 1 scrolling from stop 0 to stop 1 reads as flying BACKWARDS.
+     1.6 tracks the sphere's on-screen size to within a few percent across
+     16:10, 16:9 and 4:3, crops the app's chrome out on all four sides, and
+     still does not upscale: the asset is re-encoded from the 2880px capture
+     precisely so this scale is free. */
+  .stop-shot[data-stop='1'] .stop-art img {
+    transform: scale(1.6); transform-origin: 50% 50%; object-position: 50% 50%;
   }
 
-  /* --- DRIVEN: the pinned stage --------------------------------------- */
-  /* 360vh over four stops leaves 260vh of travel. The driver spends the first
-     7% holding the hero still and the last 16% holding the FINAL globe still —
-     see LEAD and TAIL — which leaves ~67vh of scroll per transition. The tail
-     is not slack: without it the fourth globe reaches full opacity in the same
-     pixel that the stage stops being sticky, so it is complete and already
-     sliding away, and the reader never sees it framed. */
-  .descent.driven { height: 360vh; }
-  .descent.driven .descent-stage {
-    position: sticky; top: 0; height: 100vh; overflow: hidden;
-    background: var(--tf-butter);
-  }
-  .descent.driven .stop {
-    position: absolute; inset: 0;
-    height: auto; min-height: 0; padding: 0; border: 0; background: none;
-    will-change: opacity;
-  }
-  .descent.driven .stop-art {
-    position: absolute; inset: 0; max-width: none; margin: 0;
-    will-change: transform;
-  }
-  .descent.driven .stop-shot .stop-art img {
-    width: 100%; height: 100%; object-fit: cover;
-    /* The disc in world.webp sits a shade right of centre and a shade high;
-       everything else is full-bleed terrain where the offset does nothing. */
-    object-position: 51% 49%;
-    border: 0; border-radius: 0;
-  }
-  /* ⚠ THE TERRAIN STOPS GROW DOWNWARD FROM A PINNED HORIZON, AND THAT ORIGIN IS
-     DOING TWO JOBS. These are screenshots of a running app, so the bottom ~7%
-     of each frame is the trip dock and the attribution strip — full-bleed, that
-     reads as a UI bar sliced off mid-glyph. Scaling about the TOP edge pushes
-     exactly that band out of frame (the minimum scales below are chosen to
-     clear it) while cropping nothing off the top, where the planet's limb is —
-     and the limb is the whole reason these read as globes rather than as maps.
-     Centre-origin would have taken a bite out of both. */
-  .descent.driven .stop-shot .stop-art { transform-origin: 50% 0; }
-  /* world.webp is the exception: a disc floating in sky, which wants to grow
-     from its own middle. */
-  .descent.driven .stop[data-stop='1'] .stop-art { transform-origin: 50% 50%; }
-  /* The caption becomes a glass panel in the corner. Bottom-LEFT on purpose:
-     the headline owns the top of the stage, the nav owns the very top, and the
-     lower-left of all three captures is water or low-contrast terrain. */
-  .descent.driven .stop-caption {
+  .stop-caption {
     position: absolute; z-index: 3;
     left: clamp(24px, 5vw, 72px); bottom: clamp(44px, 9vh, 92px);
-    width: min(430px, calc(100% - 48px)); max-width: none; margin: 0;
+    width: min(430px, calc(100% - 48px));
     /* ⚠ DENSER THAN THE §4 GLASS RECIPE, AND MEASURED THAT WAY. The spec's
        0.68→0.32 fill is authored for glass over the APP's pastel sky. Here it
-       sits over a photograph of forest and coastline, and the third line of the
-       caption — the one carrying the place names — fell to roughly 2.5:1
-       against pale sand. This keeps the gradient and the blur and lifts the
-       floor to 0.74, which clears 4.5:1 on every one of the three captures. */
+       sits over a photograph of forest and coastline, and the third line — the
+       one carrying the place names — fell to roughly 2.5:1 against pale sand.
+       This keeps the gradient and the blur and lifts the floor to 0.74, which
+       clears 4.5:1 on all three captures. */
     background: linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.74));
     backdrop-filter: blur(20px) saturate(150%);
     border: var(--glass-border);
     box-shadow: var(--glass-shadow);
     border-radius: 20px; padding: 22px 24px 24px;
   }
-  .descent.driven .stop-caption h2 { font-size: clamp(24px, 2.6vw, 32px); }
-  .descent.driven .stop-caption p { font-size: 15px; }
-
-  /* --- the two affordances a pinned section owes the reader ------------ */
-  /* Without these a 340vh sticky block reads as a page that has stopped
-     scrolling. The rail says how many globes there are and which one you are
-     on; the cue says the scroll wheel is still doing something. */
-  .descent-rail, .descent-cue { display: none; }
-  .descent.driven .descent-rail {
-    display: flex; flex-direction: column; gap: 10px;
-    position: absolute; z-index: 4;
-    right: clamp(18px, 2.4vw, 34px); top: 50%; transform: translateY(-50%);
-    pointer-events: none;
-  }
-  .descent-dot {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: rgba(51, 64, 107, 0.22);
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55);
-    transition: background var(--panel) var(--ease), transform var(--panel) var(--ease);
-  }
-  .descent-dot.on { background: var(--tf-ink); transform: scale(1.5); }
-  /* ⚠ A PILL, NOT BARE TEXT WITH A BUTTER HALO. The halo the hero copy uses
-     works because that copy sits on butter; this label sits at the foot of the
-     stage, which at stop 0 is the middle of a dark green planet. Ink on ocean
-     with a butter glow measured illegible. */
-  .descent.driven .descent-cue {
-    display: block;
-    position: absolute; z-index: 4; left: 50%; transform: translateX(-50%);
-    bottom: 24px; padding: 7px 15px; border-radius: 999px;
-    background: rgba(255, 255, 255, 0.82);
-    backdrop-filter: blur(14px) saturate(150%);
-    box-shadow: 0 4px 14px rgba(51, 64, 107, 0.12);
-    font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
-    text-transform: uppercase; pointer-events: none; white-space: nowrap;
-  }
+  .stop-caption .eyebrow { opacity: 0.7; margin-bottom: 10px; }
+  .stop-caption h2 { font-size: clamp(24px, 2.6vw, 32px); margin-bottom: 8px; }
+  .stop-caption p { font-size: 15px; }
 
   /* ---------- the thesis strip, immediately below the descent ---------- */
   .thesis { background: var(--tf-ink); color: var(--tf-white); padding: 56px 0; }
@@ -443,7 +368,6 @@ const lenses = [
      action is itself an anchor (`#plan`), so anchor-landing is now the main way
      people move through the page, not an afterthought. */
   section { padding: 88px 0; scroll-margin-top: 84px; }
-  .thesis + section { border-top: 0; }
   section + section { border-top: 1px solid var(--tf-border-warm); }
   section .eyebrow { opacity: 0.75; margin-bottom: 12px; }
   h2 {
@@ -532,11 +456,16 @@ const lenses = [
   }
   /* ⚠ THE TRANSFORM HAS TO CARRY THE CENTRING. `.hero-card` is centred with
      `translateX(-50%)`; a keyframe that animates plain `translateY` would drop
-     that and slam the card half a viewport to the right for the length of the
-     animation. */
+     that and slam the card half a viewport to the right for its duration. */
   @keyframes panel-in-centered-x {
     from { opacity: 0; transform: translateX(-50%) translateY(12px); }
     to { opacity: 1; transform: translateX(-50%); }
+  }
+  /* Same rule, both axes — for the narrow layout, where the copy is centred in
+     the band between the nav and the planet rather than hung from the top. */
+  @keyframes panel-in-centered-xy {
+    from { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); }
+    to { opacity: 1; transform: translate(-50%, -50%); }
   }
   @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
   .hero-card { animation: panel-in-centered-x var(--panel) var(--ease) backwards; }
@@ -544,6 +473,23 @@ const lenses = [
   .reveal { opacity: 0; }
   .reveal.in { animation: panel-in var(--panel) var(--ease) var(--reveal-delay, 0s) both; }
   .reveal.settled { animation: none; opacity: 1; }
+
+  /* ⚠ THE HERO COPY HAS TO ANSWER TO VIEWPORT HEIGHT, BECAUSE THE PLANET'S
+     APEX IS PINNED TO IT. The sphere's centre is fixed at 100vh, so its top
+     edge lands at `100vh - 45.9vh` — a fixed FRACTION of the screen — while the
+     copy above it is sized in px and vw and does not shrink when the screen
+     gets shorter. Measured on a 768-tall laptop the two collided by 47px: the
+     note and half the button row sat on the planet's cap. Trimming the type on
+     short viewports is what buys the clearance back; every number below was
+     picked to land the gap positive at 1366×768 and 1024×768, the two shapes
+     that failed. Screens over 940px tall keep the full 64px display size. */
+  @media (max-height: 940px) and (min-aspect-ratio: 1/1) {
+    .hero-card { top: clamp(80px, 9vh, 96px); }
+    h1 { font-size: clamp(34px, 4.4vw, 48px); margin: 10px 0 12px; }
+    .lede { font-size: 16px; }
+    .hero-cta { margin-top: 18px; }
+    .hero-note { margin-top: 12px; }
+  }
 
   /* Layout collapse is a WIDTH question — two columns stop working when there
      is not room for two columns. The globe is not in here; see below. */
@@ -553,71 +499,69 @@ const lenses = [
     .plan-steps { grid-template-columns: 1fr; }
     .trust-grid { grid-template-columns: 1fr; }
     .nav-links a:not(.nav-cta) { display: none; }
-    .stop-hero { min-height: 560px; }
-    .stop-shot { padding: 56px 0; }
   }
 
-  /* ⚠ SQUARISH LANDSCAPE WINDOWS GET A SMALLER PLANET, AND THEY ARE NOT RARE —
-     1024×768, 1280×1024, 1600×1200, and a tablet held landscape are all here.
-     The arc is 1.377 × the viewport HEIGHT, so it stops fitting below an aspect
-     of 1.377:1 while the driven layout is still perfectly usable. 172%/38% puts
-     the arc at 1.178 × height instead: 905px inside 1024×768, 1206 inside
-     1366×1024. The upper bound is 29/20 rather than 1.377 so there is a margin
-     either side of the threshold rather than a rule that only just holds. */
-  @media (min-width: 901px) and (min-aspect-ratio: 6/5) and (max-aspect-ratio: 29/20) {
-    #globeEmbed { top: 38%; height: 172%; }
-  }
+  /* ⚠ THE DESCENT'S BREAKPOINT IS ASPECT, NOT WIDTH, AND WRITING IT AS
+     `max-width: 900px` ALONE SHIPS TWO REAL BUGS. An iPad Pro portrait is
+     1024×1366 CSS px — wider than 900 — so a width-only rule would give it the
+     desktop treatment, where:
 
-  /* ⚠ THE GLOBE'S BREAKPOINT IS ASPECT, NOT WIDTH, AND THAT COSTS A REAL BUG IF
-     IT IS WRITTEN AS `max-width: 900px` ALONE. An iPad Pro portrait is 1024×1366
-     CSS px — wider than 900, so a width-only rule leaves it on the desktop
-     planet, whose arc would be 1881px inside a 1024-wide viewport: no limb
-     anywhere, which is the exact failure hero-globe.js's SPHERE_FILL comment was
-     written about. A portrait-rotated monitor is the same shape, worse. Every
-     viewport squarer than 6:5 lands here, phones included.
+       · the complete sphere is 0.918 × 1366 = 1254px inside a 1024-wide
+         viewport. It is no longer a whole object, which is the one thing this
+         hero is required to be.
+       · a 16:10 capture full-bleed in a portrait frame is a vertical slice of
+         terrain with the limb cropped away — the globes stop being globes.
 
-     The matching JS gate keeps the DRIVEN descent off these viewports for the
-     same reason plus a second one: a 16:10 capture full-bleed in a portrait
-     stage is a vertical slice of terrain with the limb cropped away. It reads
-     `(min-width: 901px) and (min-aspect-ratio: 121/100)` — the same boundary as
-     this rule, nudged just past it because both CSS ratio comparisons are
-     INCLUSIVE and something has to break the tie at exactly 6:5. Change one and
-     you must change the other, or a portrait tablet gets stacked panels with
-     the desktop planet and no wash: copy unreadable on top of the globe. */
-  @media (max-width: 900px), (max-aspect-ratio: 6/5) {
-    /* 62% puts the diameter at 364px inside a 390px viewport — 13px of margin
-       either side, measured, which is the whole budget. 66% eats it. */
-    #globeEmbed { top: 56%; height: 62%; left: 50%; width: 130%; }
-    /* ⚠ `display: block` IS LOAD-BEARING — the base rule hides this element on
-       desktop, so setting only the gradient here leaves the veil switched off
-       and the copy sits unreadable on the planet. Measured exactly that way. */
-    .hero-wash {
-      display: block;
-      position: absolute; inset: 0; z-index: 2; pointer-events: none;
-      /* Full strength while it is over butter (where it is invisible), then a
-         long smooth ramp so it never lays a visible band across the planet's
-         upper limb. It only has real work to do on a short viewport, where the
-         copy and the globe are forced to overlap. */
-      background: linear-gradient(180deg,
-        rgba(255, 224, 138, 0.96) 0%,
-        rgba(255, 224, 138, 0.94) 46%,
-        rgba(255, 224, 138, 0.74) 58%,
-        rgba(255, 224, 138, 0.40) 68%,
-        rgba(255, 224, 138, 0.14) 78%,
-        rgba(255, 224, 138, 0.0) 88%);
+     So every viewport at least as tall as it is wide lands here and gets a
+     smaller sphere plus the captures in cards. Same rule, both problems.
+
+     The sphere's centre stays at 100vh: the spec holds on a phone too. Only
+     the diameter changes — 0.40 × H, which is 338px inside a 390px viewport
+     and 546 inside a 1024. */
+  @media (max-width: 900px), (max-aspect-ratio: 1/1) {
+    .stop-hero { height: 128vh; min-height: 620px; }
+    #globeEmbed { top: 73vh; height: 54vh; width: 100%; }
+    /* ⚠ CENTRED IN THE BAND, NOT HUNG FROM THE TOP, AND THE TALLER THE SCREEN
+       THE MORE IT MATTERS. The planet's apex is pinned at `100vh - 20vh` = 80vh
+       whatever the shape, so a fixed `top: 88px` leaves a gap below the copy
+       that grows with the viewport: 176px of dead butter on a phone, 553px on a
+       portrait tablet. This puts the card in the middle of the band between the
+       nav's foot (68px) and that apex, which balances both gaps on every
+       narrow shape measured. The keyframe has to change with it — a transform
+       that animates only Y would drop the horizontal centring. */
+    .hero-card { top: calc(34px + 40vh); transform: translate(-50%, -50%);
+      animation-name: panel-in-centered-xy; }
+
+    .stop-shot {
+      height: auto; overflow: visible;
+      background: var(--tf-paper); padding: 56px 0;
+      border-top: 1px solid var(--tf-border-warm);
     }
-    .hero-card { top: 80px; }
+    .stop-shot .stop-art,
+    .stop-shot[data-stop='1'] .stop-art { position: static; }
+    /* Undo the full-bleed framing wholesale: in a card the app's dock is part
+       of the picture rather than a bar sliced off the foot of the screen. */
+    .stop-shot .stop-art img,
+    .stop-shot[data-stop='1'] .stop-art img {
+      width: 100%; height: auto; transform: none; object-fit: fill;
+      border-radius: 16px; border: 1px solid var(--tf-border-warm);
+    }
+    .stop-caption {
+      position: static; width: auto; max-width: 34em;
+      margin: 0 auto 24px; background: none; backdrop-filter: none;
+      border: 0; box-shadow: none; padding: 0;
+    }
+    .stop-caption p { font-size: 16px; opacity: 0.88; }
   }
+
   /* §8: under prefers-reduced-motion all movement becomes an opacity
-     cross-fade at 120ms. The descent is movement, so it does not run at all —
-     the driver never adds `.driven` and the stacked layout above is what
-     ships. Nothing here needs to undo it. */
+     cross-fade at 120ms. The descent needs nothing here — it has no motion of
+     its own, only the reader's scroll. */
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     .hero-card { animation: fade-in 120ms var(--ease) backwards; }
     .reveal.in { animation: fade-in 120ms var(--ease) both; }
     .btn, .btn:hover { transform: none; transition: none; }
-    .descent-dot { transition: none; }
   }
 </style>
 </head>
@@ -638,88 +582,78 @@ const lenses = [
   </div>
 </nav>
 
-<div class="descent" id="descent">
-  <div class="descent-stage">
+<div class="descent">
 
-    <section class="stop stop-hero" data-stop="0">
-      <div class="stop-art"><div id="globeEmbed"></div></div>
-      <div class="hero-wash"></div>
-      <div class="hero-card">
-        <p class="eyebrow">A travel planner you look at</p>
-        <h1>Start with the<br /><span class="light">whole world.</span></h1>
-        <p class="lede">Most planners open with a box asking where you're going. tailFeathers
-          opens with <b>3,785 places worth going</b>, across 205 countries, on a globe you turn
-          with your hand.</p>
-        <div class="hero-cta">
-          <a class="btn btn-paper" href={ctaHref}>{ctaLabel}</a>
-          <a class="btn btn-secondary" href="#lenses">Browse by what you like</a>
-        </div>
-        <p class="hero-note">Free · runs in your browser · no account</p>
+  <section class="stop-hero" data-stop="0">
+    <div class="stop-art"><div id="globeEmbed"></div></div>
+    <div class="hero-card">
+      <p class="eyebrow">A travel planner you look at</p>
+      <h1>Start with the<br /><span class="light">whole world.</span></h1>
+      <p class="lede">Most planners open with a box asking where you're going. tailFeathers
+        opens with <b>3,785 places worth going</b>, across 205 countries, on a globe you turn
+        with your hand.</p>
+      <div class="hero-cta">
+        <a class="btn btn-paper" href={ctaHref}>{ctaLabel}</a>
+        <a class="btn btn-secondary" href="#lenses">Browse by what you like</a>
       </div>
-    </section>
-
-    <section class="stop stop-shot" data-stop="1">
-      <div class="wrap">
-        <div class="stop-caption">
-          <p class="eyebrow">The world view</p>
-          <h2>Twenty-nine places to start</h2>
-          <p>The ones everyone already knows — sitting where they actually are, not
-            listed down a column.</p>
-        </div>
-        <div class="stop-art">
-          <img
-            src="/shots/world.webp"
-            alt="The tailFeathers globe at world view, about two dozen destination markers scattered across Europe, Africa and the Americas"
-            width="2880" height="1800" decoding="async" loading="eager"
-          />
-        </div>
-      </div>
-    </section>
-
-    <section class="stop stop-shot" data-stop="2">
-      <div class="wrap">
-        <div class="stop-caption">
-          <p class="eyebrow">One lean-in later</p>
-          <h2>Come closer and the rest unfold</h2>
-          <p>The regional headliners, then a country's own classics, then the things only
-            locals name: Meteora, Rila Monastery, Belogradchik Rocks, Ksamil.</p>
-        </div>
-        <div class="stop-art">
-          <img
-            src="/shots/region.webp"
-            alt="The globe tilted over south-east Europe, hundreds of named destination markers covering Greece, the Balkans, Romania and Turkey"
-            width="1800" height="1125" decoding="async" loading="lazy"
-          />
-        </div>
-      </div>
-    </section>
-
-    <section class="stop stop-shot" data-stop="3">
-      <div class="wrap">
-        <div class="stop-caption">
-          <p class="eyebrow">Beaches lens on</p>
-          <h2>Down to one sea at a time</h2>
-          <p>Switch on a lens and the globe re-lights around it. What's left is a shortlist
-            you can look at instead of read.</p>
-        </div>
-        <div class="stop-art">
-          <img
-            src="/shots/islands.webp"
-            alt="The globe tilted low over the Aegean, islands and coastline in relief, with Athens, Mykonos, Naxos, Meteora and Ephesus marked"
-            width="1800" height="1125" decoding="async" loading="lazy"
-          />
-        </div>
-      </div>
-    </section>
-
-    <div class="descent-rail" aria-hidden="true">
-      <span class="descent-dot on"></span>
-      <span class="descent-dot"></span>
-      <span class="descent-dot"></span>
-      <span class="descent-dot"></span>
+      <p class="hero-note">Free · runs in your browser · no account</p>
     </div>
-    <p class="descent-cue" aria-hidden="true">Scroll to fly in</p>
-  </div>
+  </section>
+
+  <section class="stop-shot" data-stop="1">
+    <div class="wrap">
+      <div class="stop-caption">
+        <p class="eyebrow">The world view</p>
+        <h2>Twenty-nine places to start</h2>
+        <p>The ones everyone already knows — sitting where they actually are, not
+          listed down a column.</p>
+      </div>
+      <div class="stop-art">
+        <img
+          src="/shots/world.webp"
+          alt="The tailFeathers globe at world view, about two dozen destination markers scattered across Europe, Africa and the Americas"
+          width="2880" height="1800" decoding="async" loading="eager"
+        />
+      </div>
+    </div>
+  </section>
+
+  <section class="stop-shot" data-stop="2">
+    <div class="wrap">
+      <div class="stop-caption">
+        <p class="eyebrow">One lean-in later</p>
+        <h2>Come closer and the rest unfold</h2>
+        <p>The regional headliners, then a country's own classics, then the things only
+          locals name: Meteora, Rila Monastery, Belogradchik Rocks, Ksamil.</p>
+      </div>
+      <div class="stop-art">
+        <img
+          src="/shots/region.webp"
+          alt="The globe tilted over south-east Europe, hundreds of named destination markers covering Greece, the Balkans, Romania and Turkey"
+          width="1800" height="1125" decoding="async" loading="lazy"
+        />
+      </div>
+    </div>
+  </section>
+
+  <section class="stop-shot" data-stop="3">
+    <div class="wrap">
+      <div class="stop-caption">
+        <p class="eyebrow">Beaches lens on</p>
+        <h2>Down to one sea at a time</h2>
+        <p>Switch on a lens and the globe re-lights around it. What's left is a shortlist
+          you can look at instead of read.</p>
+      </div>
+      <div class="stop-art">
+        <img
+          src="/shots/islands.webp"
+          alt="The globe tilted low over the Aegean, islands and coastline in relief, with Athens, Mykonos, Naxos, Meteora and Ephesus marked"
+          width="1800" height="1125" decoding="async" loading="lazy"
+        />
+      </div>
+    </div>
+  </section>
+
 </div>
 
 <div class="thesis">
@@ -734,10 +668,9 @@ const lenses = [
   <div class="wrap">
     <p class="eyebrow sec-head">What is actually on it</p>
     <h2 class="sec-head">Three thousand seven hundred and eighty-five places</h2>
-    <p class="section-lede sec-head">Twenty-nine of them sit on the world view — the ones
-      everyone already knows. The rest arrive as you come closer: the regional headliners,
-      then a country's own classics, then the things only locals name. All of them travel
-      inside the app, so browsing costs nothing and asks for nobody's account.</p>
+    <p class="section-lede sec-head">All of them travel inside the app rather than arriving
+      from a server, so browsing costs nothing, works on a plane, and asks for nobody's
+      account. Nothing you look at is being counted.</p>
 
     <div class="stat-row">
       <div class="stat"><b>3,785</b><span>places, in 205 countries</span></div>
@@ -937,6 +870,12 @@ const lenses = [
   // The three globes below it in the descent are the opposite trade: those ARE
   // the engine, captured from the built app by globe_src/scripts/shot-marketing.mjs.
   //
+  // ⚠ THERE IS DELIBERATELY NO SCROLL DRIVER HERE. The descent is four objects
+  // in ordinary document flow; the reader's scroll is the whole animation. An
+  // earlier build pinned a stage and cross-faded between the four on scroll
+  // progress, which reads as a slideshow rather than a descent — see the block
+  // comment above `.descent` in the stylesheet before reaching for that again.
+  //
   // ⚠ THIS TAG CARRIES NO ATTRIBUTES, AND THAT IS LOAD-BEARING. Astro only
   // bundles a `<script>` that has none of its own — `is:inline` opts out, and so
   // does a bare `type="module"`. With either one present Astro emits the source
@@ -945,161 +884,24 @@ const lenses = [
   // hero with an empty right half. Measured here, exactly that way.
   import { mountHeroGlobe } from '../scripts/hero-globe.js';
 
-  const hero = mountHeroGlobe(document.getElementById('globeEmbed'), {
+  mountHeroGlobe(document.getElementById('globeEmbed'), {
     texture: '/hero/globe.webp',
     clouds: '/hero/clouds.webp',
   });
 
+  // The header floats transparent over the hero; past the hero's foot it needs
+  // a surface of its own to stay readable over the page content.
   const navBar = document.querySelector('nav');
-
-  // ======================= the descent driver ===========================
-  // Drives the pinned four-globe flight. See the big comment above `.descent`
-  // in the stylesheet for what the two layouts are; this decides which runs and
-  // animates the driven one.
-  const descent = document.getElementById('descent');
-  const stops = [...descent.querySelectorAll('.stop')];
-  const arts = stops.map((s) => s.querySelector('.stop-art'));
-  const dots = [...descent.querySelectorAll('.descent-dot')];
-  const cue = descent.querySelector('.descent-cue');
-
-  // Per-stop scale ramp, [entering, leaving]. Every stop only ever GROWS, which
-  // is what makes four separate pictures read as one continuous approach.
-  //
-  // ⚠ STOP 1's NUMBERS ARE NOT ARBITRARY AND ARE NOT A TASTE CALL. world.webp
-  // is a small disc floating in a lot of empty sky — at scale 1 its planet is
-  // roughly 486px against the live globe's ~1240px arc, so a plain cross-fade
-  // there reads as flying BACKWARDS. 2.25→2.60 sizes the disc to hand over from
-  // the live globe at about the same width and keep growing. That crops the
-  // app's chrome and the attribution strip out of frame, which is why the
-  // capture was re-encoded from the 2880px source: at 2.6 it is still only a
-  // 1.3x upscale.
-  //
-  // ⚠ STOPS 2 AND 3 HAVE A FLOOR, NOT A FREE CHOICE OF STARTING SCALE. They
-  // scale about their top edge (see `transform-origin` in the stylesheet), so
-  // the scale is what pushes the app's dock and attribution strip — the bottom
-  // ~7% of each capture — out of frame. Below about 1.075 that band reappears.
-  const SCALES = [[1.00, 1.09], [2.25, 2.60], [1.08, 1.22], [1.10, 1.24]];
-  // Fraction of the descent that holds stop 0 still before anything moves, so
-  // the hero does not start dissolving on the first notch of the wheel.
-  const LEAD = 0.07;
-  // ...and the fraction by which the LAST globe must already be complete. The
-  // stage stops being sticky at p = 1 exactly, so a sequence that finishes there
-  // finishes on the frame it starts sliding away. See `.descent.driven`.
-  const TAIL = 0.84;
-  // Cross-fade width, in stop-units. Below 1 it gives each stop a plateau where
-  // it is fully opaque; at 1 the fades would be continuous and nothing would
-  // ever sit still.
-  const FADE = 0.58;
-
-  let driven = false;
-  let ticking = false;
-  // ⚠ MEASURED ON RESIZE, NOT READ PER FRAME. `getBoundingClientRect()` inside
-  // a scroll handler forces a synchronous layout on every event, and this one
-  // also writes styles — which is the classic read/write thrash. Two numbers
-  // cached here turn the whole frame into writes only.
-  let descentTop = 0;
-  let descentTravel = 1;
-
-  const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
-
-  function measure() {
-    let top = 0;
-    for (let el = descent; el; el = el.offsetParent) top += el.offsetTop;
-    descentTop = top;
-    descentTravel = Math.max(1, descent.offsetHeight - innerHeight);
-  }
-
-  function layout() {
-    ticking = false;
+  addEventListener('scroll', () => {
     navBar.classList.toggle('scrolled', scrollY > 40);
-    if (!driven) return;
-
-    const p = clamp01((scrollY - descentTop) / descentTravel);
-    // 0 at the first globe, 3 at the last.
-    const t = clamp01((p - LEAD) / (TAIL - LEAD)) * (stops.length - 1);
-
-    for (let i = 0; i < stops.length; i++) {
-      const d = t - i;
-      const alpha = clamp01((1 - Math.abs(d)) / FADE);
-      stops[i].style.opacity = alpha;
-      // ⚠ `visibility`, NOT JUST OPACITY. An opacity-0 stop still catches
-      // clicks and still takes keyboard focus, so without this the hero's two
-      // buttons stay pressable from three screens further down — invisibly.
-      stops[i].style.visibility = alpha > 0.02 ? 'visible' : 'hidden';
-      const [from, to] = SCALES[i];
-      // Stop 0 sits at its resting scale until it starts handing over; the
-      // others ramp across their whole visible life, entering small.
-      const u = i === 0 ? clamp01(d) : clamp01((d + 1) / 2);
-      arts[i].style.transform = `scale(${(from + (to - from) * u).toFixed(4)})`;
-    }
-
-    // ⚠ THE ENGINE'S OWN IntersectionObserver CANNOT DO THIS. The globe's host
-    // is pinned inside the stage, so it intersects the viewport for all 340vh —
-    // including the three screens where it is invisible behind a screenshot.
-    hero.setPaused(t >= 1);
-
-    cue.style.opacity = clamp01(1 - t * 3);
-    const active = Math.round(t);
-    for (let i = 0; i < dots.length; i++) dots[i].classList.toggle('on', i === active);
-  }
-
-  function request() {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(layout);
-  }
-
-  // Both queries are read live rather than latched: a reader can turn reduced
-  // motion on, or rotate a tablet, while the page is open.
-  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
-  // ⚠ ASPECT, NOT JUST WIDTH — AND IT MUST STAY IN STEP WITH THE STYLESHEET.
-  // An iPad Pro portrait is 1024×1366, so a bare `min-width: 901px` would pin a
-  // 360vh descent on it and then crop half the width off every landscape
-  // capture.
-  //
-  // 121/100, not the stylesheet's 6/5, and the 0.01 is deliberate. CSS
-  // `min-aspect-ratio` and `max-aspect-ratio` are both inclusive, so a viewport
-  // at exactly 6:5 — 1200×1000 — matches the small-globe query AND would match
-  // a 6/5 gate here: a pinned descent that opens on the phone-sized planet and
-  // then cuts to a full-screen one. Sitting just above the boundary puts the tie
-  // on the same side in both files. Measured: at 1.20 the page is stacked with
-  // the small globe, and the 1.20-1.21 band is stacked with the 172% globe,
-  // whose arc still fits.
-  const wideEnough = matchMedia('(min-width: 901px) and (min-aspect-ratio: 121/100)');
-
-  function syncMode() {
-    const next = wideEnough.matches && !reduceMotion.matches;
-    if (next !== driven) {
-      driven = next;
-      descent.classList.toggle('driven', driven);
-      if (!driven) {
-        // Hand every element back to the stylesheet. Leaving an inline
-        // `opacity: 0` behind would blank three panels of the stacked layout.
-        hero.setPaused(false);
-        for (const el of stops) { el.style.opacity = ''; el.style.visibility = ''; }
-        for (const el of arts) el.style.transform = '';
-        cue.style.opacity = '';
-        for (let i = 0; i < dots.length; i++) dots[i].classList.toggle('on', i === 0);
-      }
-    }
-    measure();
-    layout();
-  }
-
-  reduceMotion.addEventListener('change', syncMode);
-  wideEnough.addEventListener('change', syncMode);
-  addEventListener('scroll', request, { passive: true });
-  addEventListener('resize', () => { measure(); request(); }, { passive: true });
-  // Late webfonts and the three screenshots both change the stacked layout's
-  // height, and the driven one's `340vh` does not settle until the viewport is
-  // final. Re-measuring on load costs one layout and prevents a descent that is
-  // permanently a few hundred pixels out of step with the scrollbar.
-  addEventListener('load', () => { measure(); layout(); });
-  syncMode();
+  }, { passive: true });
 
   // ---------- scroll motion (spec §8: 240ms panels, reduced-motion handled
   // in CSS as a 120ms fade) ----------
   // Reveal classes are applied FROM JS so the document is complete without it.
+  // ⚠ NOTHING INSIDE `.descent` IS TAGGED. Those four screens are the page's
+  // proof; hiding them behind a script until an observer fires would put the
+  // whole argument at the mercy of one failed module fetch.
   if ('IntersectionObserver' in window) {
     const targets = document.querySelectorAll(
       '.sec-head, .stat-row > *, .plan-steps > *, .feature-row > *, ' +

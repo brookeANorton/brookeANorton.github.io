@@ -74,13 +74,14 @@ const FOV_Y = Math.PI / 5;
 /// of the composition rather than a bleed off the right edge, and at 0.58 a
 /// centred sphere left too much empty butter around it to read as the subject.
 ///
-/// ⚠ THE CONTAINER'S HEIGHT CHANGED WHEN THE HERO BECAME A SCROLL DESCENT, AND
-/// THIS NUMBER DID NOT. The host used to sit in a 94vh header; it now sits in a
-/// 100vh sticky stage inside `.descent`. At `height: 168%` of each, the sphere
-/// went from 1.17x the viewport height to 1.24x — the growth the change was
-/// asked for, and still narrow enough that the limb closes left and right on
-/// every desktop width down to 1024. Change either number and re-measure the
-/// limb; do not assume "bigger" is safe.
+/// ⚠ THE HOST IS NOW SIZED IN vh, AND THIS NUMBER IS HALF OF THAT ARITHMETIC.
+/// The page requires a COMPLETE sphere whose equator sits on the fold, so
+/// `#globeEmbed` is `top: 38vh; height: 124vh` — centre at exactly 100vh — and
+/// the diameter that falls out is `0.74 x 124vh` = 91.8vh. A whole planet has to
+/// fit its whole DIAMETER on screen, not merely the arc a cropped cap showed, so
+/// changing either number moves a hard constraint: `0.918 x viewportHeight` must
+/// stay under the viewport WIDTH. Re-measure both, on a 4:3 window as well as a
+/// 16:9 one; do not assume "bigger" is safe.
 const SPHERE_FILL = 0.74;
 
 /// Distance from the sphere's centre that makes [SPHERE_FILL] true.
@@ -268,11 +269,7 @@ function spinWithTilt(spinRad, tiltRad) {
   ]);
 }
 
-/// Mounts the hero globe.
-///
-/// Returns `{ dispose, setPaused }`. `setPaused` exists because the visibility
-/// gate below is not sufficient on its own — see the IntersectionObserver near
-/// the bottom of this function.
+/// Mounts the hero globe. Returns a disposer.
 ///
 /// @param {HTMLElement} host
 /// @param {{texture: string, clouds?: string, degreesPerSecond?: number}} options
@@ -297,11 +294,7 @@ export function mountHeroGlobe(host, options) {
     // world map, which is not what this element is for. The page's sky field
     // shows through and the hero still reads.
     host.dataset.globe = 'unsupported';
-    // ⚠ SAME SHAPE AS THE SUCCESS PATH. The caller drives `setPaused` from the
-    // scroll descent; returning a bare function here would throw on the first
-    // scroll event of any machine without WebGL, taking the nav bar's scroll
-    // handler down with it.
-    return { dispose: () => canvas.remove(), setPaused() {} };
+    return () => canvas.remove();
   }
 
   const program = gl.createProgram();
@@ -413,12 +406,11 @@ export function mountHeroGlobe(host, options) {
   let spin = INITIAL_SPIN;
   let last = 0;
   let visible = true;
-  let paused = false;
   let disposed = false;
 
   function frame(now) {
     raf = requestAnimationFrame(frame);
-    if (!visible || paused) { last = now; return; }
+    if (!visible) { last = now; return; }
     resize();
     const dt = last ? Math.min(0.1, (now - last) / 1000) : 0;
     last = now;
@@ -460,12 +452,15 @@ export function mountHeroGlobe(host, options) {
   // Scrolled past, the hero is still rendering every frame behind the rest of
   // the page. On a laptop that is a fan for nothing.
   //
-  // ⚠ THIS GATE ALONE IS NOT ENOUGH ANY MORE, AND THE REASON IS THE DESCENT.
-  // The host lives inside `position: sticky` stop 0 of a ~340vh block, so it
-  // INTERSECTS THE VIEWPORT FOR THE ENTIRE DESCENT — including the three screens
-  // where it has been faded to `opacity: 0` behind a screenshot. Intersection
-  // says "on screen"; it cannot say "visible". `setPaused` is what the page uses
-  // to say the second thing.
+  // ⚠ THIS IS ONLY SUFFICIENT BECAUSE THE HERO SITS IN ORDINARY FLOW. An
+  // earlier build of the page pinned this host inside a `position: sticky`
+  // stage, where it intersected the viewport for four straight screens —
+  // including the three it spent invisible behind a screenshot. Intersection can
+  // say "on screen"; it cannot say "visible". Pin this host again and the gate
+  // silently stops working, and the planet renders at full cost the whole way
+  // down the page. (That build carried a `setPaused` for exactly this; it went
+  // when the pin did, rather than stay as an API describing a layout that no
+  // longer exists.)
   const observer = new IntersectionObserver(
     ([entry]) => { visible = entry.isIntersecting; },
     { threshold: 0 },
@@ -474,19 +469,12 @@ export function mountHeroGlobe(host, options) {
 
   raf = requestAnimationFrame(frame);
 
-  return {
-    dispose() {
-      if (disposed) return;
-      disposed = true;
-      cancelAnimationFrame(raf);
-      observer.disconnect();
-      gl.getExtension('WEBGL_lose_context')?.loseContext();
-      canvas.remove();
-    },
-    /// Stops the render loop without tearing down the context, so resuming is
-    /// free. The spin does NOT advance while paused — the planet picks up from
-    /// the longitude it was left at, which is what you want when the user
-    /// scrolls back up to it.
-    setPaused(next) { paused = Boolean(next); },
+  return function dispose() {
+    if (disposed) return;
+    disposed = true;
+    cancelAnimationFrame(raf);
+    observer.disconnect();
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+    canvas.remove();
   };
 }

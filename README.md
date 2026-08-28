@@ -84,7 +84,7 @@ for s in world region islands roads timeline; do
   node scripts/shot-marketing.mjs --steps globe_src/scripts/shot-scenes/$s.json
 done
 # ⚠ world.webp keeps its NATIVE 2880 width; everything else goes to 1800.
-# The descent scales world.webp to ~2.25x (see "The descent" above), so a
+# The descent scales world.webp to 1.6x (see "The descent" above), so a
 # 1800px encode of it ships visibly soft while the others never leave 1:1.
 node scripts/png-to-webp.mjs ../build/marketing-shots/world.png --quality 0.82
 for s in region islands roads timeline; do
@@ -109,17 +109,16 @@ Three traps, each already paid for:
   UI does not label, so a screenshot of one asserts something untrue. The trip
   in `shots/timeline.webp` uses car legs only, which are really routed.
 
-## The descent — four globes, one flight
+## The descent — four globes, one scroll
 
-The top of the page is not a hero, it is a **360vh block with a pinned 100vh
-stage**. Four "stops" sit on top of each other and the scroll position
-cross-fades between them while each one grows, so the page reads as a continuous
-flight into the planet:
+The top of the page is not a hero, it is **four globes laid down the page in
+ordinary document flow**, about four and a half screens of them. The reader's
+own scroll is the whole animation:
 
 | Stop | What it is | Why it is there |
 | --- | --- | --- |
-| 0 | the live WebGL globe | the whole planet, painted. It is a baked texture, so it carries **no destination markers** — which is exactly why stop 1 has to exist. |
-| 1 | `shots/world.webp` | the app's world view, whole disc, 29 markers. The markers appearing *is* the transition's payload. |
+| 0 | the live WebGL globe | one **complete** sphere. It is a baked texture, so it carries **no destination markers** — which is exactly why stop 1 has to exist. |
+| 1 | `shots/world.webp` | the app's world view, whole disc, 29 markers. The markers arriving is the payload. |
 | 2 | `shots/region.webp` | the same planet with the limb high in frame, hundreds of markers. |
 | 3 | `shots/islands.webp` | the limb at the top edge, one sea. |
 
@@ -128,45 +127,71 @@ one flight. `roads.webp` and `timeline.webp` are deliberately **not** in the
 stack: one is flat Map mode with no limb at all and the other is a UI, and
 either one breaks the read. They stay as ordinary sections below.
 
-### Three layouts, and only one of them is the descent
+### ⚠ Do not rebuild this as a pinned stage
 
-The stacked layout — four ordinary panels, art in a card — is the CSS **base**,
-not a fallback bolted on afterwards. It is what ships for:
+The first version *was* one: a `position: sticky` 100vh stage inside a 360vh
+block, cross-fading between four layers on scroll progress, each scaling as it
+went. It was rejected on sight — **"it's tabbed"** — and that diagnosis is
+right. Two layers swapping inside a frame that does not move is a slideshow, and
+no easing curve turns a slideshow into a descent. Parallax is the same trick
+wearing a different hat; it is not the fix either.
 
-* **no JavaScript** (the `driven` class is added by script),
-* **`prefers-reduced-motion: reduce`** — §8 of the spec makes this a promise, and
-  a scroll-driven zoom is motion,
-* **anything under 901px** — a 360vh pinned block on a phone is four screens
-  before the thesis strip, and a 16:10 capture full-bleed in a portrait stage is
-  a vertical slice of terrain with the limb cropped off.
+What replaced it is plain CSS. There is **no scroll driver, no cross-fade and no
+`driven` class**, which is also why there is now only one layout instead of
+three: the section is identical with JavaScript disabled, under
+`prefers-reduced-motion`, and to a crawler. Verified with script execution
+disabled over CDP — same document height, all three panels laid out, every
+caption visible.
 
-All three are measured, not assumed; `prefers-reduced-motion` and script-disabled
-are both checked with CDP emulation.
+### The hero's geometry is a spec, not a look
+
+> One object and complete — only the top half on the first screen.
+
+That fixes two things, and the harness asserts both rather than eyeballing them:
+
+* the sphere's **centre sits at exactly 100vh** from the top of the page, so the
+  equator lands on the fold and scrolling one half-screen reveals a whole planet;
+* the sphere's **whole diameter** is on screen — a complete object, not the
+  cropped cap the pinned version showed.
+
+`#globeEmbed` is therefore sized in **vh, not percent**. Percent would measure
+against `.stop-hero`, so the centre would drift whenever the hero's height
+changed and the spec would quietly stop holding. In vh the arithmetic is
+visible: `top: 38vh` + `height: 124vh` ÷ 2 = 100vh, and the diameter is
+`SPHERE_FILL × 124vh` = 91.8vh.
 
 ### The numbers that are load-bearing
 
-* **`SPHERE_FILL` sizes the planet, not the CSS.** See the block comment on
-  `#globeEmbed`. The visible arc comes out at 138% of the viewport *height*;
-  that number is what decides whether it reads as a globe or as a curved
-  texture, and it has to be re-checked against 1024, 1366, 1440 and 1920 after
-  any change to `top`/`height`.
+* **`SPHERE_FILL` sizes the planet, not the CSS.** The width constraint got
+  *tighter* when the sphere became complete: a cropped cap only had to fit its
+  visible arc, a whole planet has to fit its whole diameter. The rule is
+  `0.918 × viewportHeight ≤ viewportWidth`, i.e. any viewport at least as wide
+  as it is tall.
+* **The breakpoint is aspect, not width.** An iPad Pro portrait is 1024×1366 CSS
+  px, so `max-width: 900px` alone would give it the desktop treatment: a 1254px
+  sphere inside a 1024-wide screen (no longer one object) and 16:10 captures
+  full-bleed in a portrait frame (a vertical slice of terrain, limb cropped
+  away). Everything at least as tall as it is wide gets the smaller sphere and
+  the captures in cards.
+* **The hero copy answers to viewport *height*.** The planet's apex is pinned to
+  a fixed fraction of the screen while the copy is sized in px and vw. On a
+  768-tall laptop they collided by 47px — the note and half the button row sat
+  on the planet's cap. The `max-height: 940px` block trims the type to buy that
+  clearance back.
 * **Stops 2 and 3 scale about their top edge.** The bottom ~7% of every capture
   is the app's trip dock and attribution strip; full-bleed, that reads as a UI
-  bar sliced off mid-glyph. Scaling from `transform-origin: 50% 0` pushes it out
-  of frame while cropping nothing off the top, where the limb is. The minimum
-  scales in `SCALES` are chosen to clear it — below ~1.075 the dock reappears.
-* **Stop 1 scales to ~2.25×, and that is why `world.webp` is re-encoded from the
-  2880px source.** Its planet is a small disc in a lot of sky; at scale 1 it is
-  roughly a third the width of the live globe, so a plain cross-fade reads as
-  flying *backwards*.
-* **`TAIL = 0.84`.** The stage stops being sticky at progress 1 exactly, so a
-  sequence that finishes there finishes on the frame it starts sliding away, and
-  the fourth globe is never seen framed.
-* **`hero.setPaused()` exists because IntersectionObserver cannot do this job.**
-  The globe's host is pinned inside the stage, so it intersects the viewport for
-  all 360vh — including the three screens where it is invisible behind a
-  screenshot. Without the explicit pause it renders at full cost the whole way
-  down.
+  bar sliced off mid-glyph. `scale(1.10)` from `transform-origin: 50% 0` pushes
+  it out of frame while cropping nothing off the top, where the limb is. These
+  scales are static framing, not motion.
+* **Stop 1 scales to 1.6×, and that is why `world.webp` is re-encoded from the
+  2880px source.** Its planet is a small disc in a lot of sky — about a third
+  the width of the sphere above it — so at scale 1 scrolling into it reads as
+  flying *backwards*. 1.6 tracks the sphere's on-screen size to within a few
+  percent across 16:10, 16:9 and 4:3, and does not upscale.
+
+`gates.mjs` in the session scratchpad checks all of this at eleven viewport
+shapes: complete, centre at 100vh, sphere inside its section, copy clear of the
+apex, correct layout, no horizontal overflow.
 
 ## The hero globe
 
